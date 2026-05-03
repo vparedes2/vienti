@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wind Forecast Application</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.2/chart.min.css" />
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #map { height: 400px; }
+        #chart-container { width: 100%; height: 400px; }
+    </style>
+</head>
+<body>
+    <h1>Wind Forecast Application</h1>
+    <div id="map"></div>
+    <div id="chart-container"><canvas id="windChart"></canvas></div>
+    <button id="favorites">View Favorites</button>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.2/chart.min.js"></script>
+    <script>
+        // GPS and Leaflet Map Setup
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Open-Meteo API integration
+        async function getWindData(latitude, longitude) {
+            const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=wind_speed_10m`);
+            const data = await response.json();
+            return data;
+        }
+
+        // Favorites system
+        let favoriteLocations = [];
+        document.getElementById('favorites').addEventListener('click', () => {
+            alert('Favorites: ' + favoriteLocations.join(', '));
+        });
+
+        // Dummy function to simulate GPS data
+        function simulateGPS() {
+            return { latitude: 40.7128, longitude: -74.0060 }; // Example coordinates for New York
+        }
+
+        // Main Application Logic
+        (async function() {
+            const { latitude, longitude } = simulateGPS();
+            const windData = await getWindData(latitude, longitude);
+            const windSpeed = windData.hourly.wind_speed_10m.slice(0, 8); // 8-hour forecast
+
+            // Chart.js visualization
+            const ctx = document.getElementById('windChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: 8 }, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'Wind Speed (m/s)',
+                        data: windSpeed,
+                        borderColor: 'blue',
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Hour' } },
+                        y: { title: { display: true, text: 'Wind Speed (m/s)' } }
+                    }
+                }
+            });
+
+            // Add favorite example
+            favoriteLocations.push('New York City');
+        })();
+    </script>
+</body>
+</html>
