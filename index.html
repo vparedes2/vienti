@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Viento Local v8.0</title>
+  <title>Viento Local v9.0</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -36,7 +36,7 @@
   <header>
     <h1>🌬️ Viento Local</h1>
     <p>Multi‑fuente · próximas 8 horas · GPS + mapa satelital</p>
-    <div class="version">v8.0</div>
+    <div class="version">v9.0</div>
   </header>
 
   <div class="controls">
@@ -112,10 +112,10 @@
 </div>
 
 <script>
-const VERSION='v8.0';
+const VERSION='v9.0';
 let map=null, windLayer=null, currentLat=null, currentLon=null, currentCity='';
 let forecastData=[];
-let favorites=JSON.parse(localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
+let favorites=JSON.parse(localStorage.getItem('windFavoritesV9')||localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
 const $=id=>document.getElementById(id);
 
 function showStatus(msg,type=''){const el=$('status');el.textContent=msg;el.className='status '+type;}
@@ -128,11 +128,10 @@ function arrowTo(whereDeg){const arrows=['↑','↗','→','↘','↓','↙','�
 function windColor(speed){if(speed<10)return'#10b981';if(speed<20)return'#38bdf8';if(speed<30)return'#f59e0b';if(speed<40)return'#f97316';return'#ef4444'}
 function formatHour(iso){return new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
 
-function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV8',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
+function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV9',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
 renderFavorites();
 
-showStatus('API key guardada en este navegador','ok');});
-$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV8',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
+$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV9',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
 $('gpsBtn').addEventListener('click',getGPS);
 $('searchBtn').addEventListener('click',searchCity);
 $('cityInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchCity();});
