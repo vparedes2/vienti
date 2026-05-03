@@ -534,4 +534,250 @@
                         const icon = L.divIcon({
                             className: 'wind-marker',
                             html: `<div style="transform:rotate(${dir}deg);color:${color};font-size:24px;text-shadow:0 0 10px ${color}80;">➤</div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        });
+                        
+                        const marker = L.marker([pLat, pLon], { icon }).addTo(windLayer);
+                        marker.bindPopup(`
+                            <div class="wind-popup">
+                                <div class="speed">${speed} km/h</div>
+                                <div class="dir">${degToCardinal(dir)} ${Math.round(dir)}°</div>
+                                <div style="font-size:0.75rem;color:#64748b;margin-top:4px;">Ráf: ${Math.round(data.current.wind_gusts_10m)} km/h</div>
+                            </div>
+                        `);
+                    }
+                } catch (e) {}
+            }
+        }
         
+        // Fetch datos
+        async function fetchWeather(lat, lon) {
+            showStatus('Consultando modelos meteorológicos...', 'loading');
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m&forecast_days=2&timezone=auto&models=ecmwf_ifs04,gfs_global,icon_global`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                initMap(lat, lon);
+                addWindMarkers(lat, lon);
+                
+                renderCurrent(data.current);
+                renderForecast(data.hourly);
+                
+                document.getElementById('mainContent').classList.remove('hidden');
+                showStatus('');
+                document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleString('es-AR');
+            } catch (e) {
+                showStatus('Error al obtener datos meteorológicos', 'error');
+                console.error(e);
+            }
+        }
+        
+        function renderCurrent(cur) {
+            const speed = Math.round(cur.wind_speed_10m);
+            document.getElementById('currentSpeed').textContent = speed;
+            document.getElementById('currentSpeed').style.color = windColor(speed);
+            document.getElementById('currentDir').textContent = `${Math.round(cur.wind_direction_10m)}° ${degToCardinal(cur.wind_direction_10m)}`;
+            document.getElementById('currentGust').textContent = Math.round(cur.wind_gusts_10m) + ' km/h';
+            document.getElementById('currentTemp').textContent = Math.round(cur.temperature_2m) + '°';
+            document.getElementById('currentHum').textContent = cur.relative_humidity_2m + '%';
+            
+            document.getElementById('compassArrow').style.transform = `rotate(${cur.wind_direction_10m}deg)`;
+            
+            const alertBox = document.getElementById('alertBox');
+            if (cur.wind_gusts_10m > 50) {
+                alertBox.className = 'alert-box danger show';
+                alertBox.textContent = `🚨 RÁFAGAS CRÍTICAS: ${Math.round(cur.wind_gusts_10m)} km/h. SUSPENDER TRABAJOS EN ALTURA Y GRÚAS.`;
+            } else if (cur.wind_gusts_10m > 40) {
+                alertBox.className = 'alert-box show';
+                alertBox.textContent = `⚠️ Ráfagas de ${Math.round(cur.wind_gusts_10m)} km/h. Precaución en operaciones expuestas.`;
+            } else {
+                alertBox.className = 'alert-box';
+            }
+        }
+        
+        function renderForecast(hourly) {
+            const now = new Date();
+            let startIndex = 0;
+            for (let i = 0; i < hourly.time.length; i++) {
+                if (new Date(hourly.time[i]) >= now) { startIndex = i; break; }
+            }
+            const endIndex = Math.min(startIndex + 8, hourly.time.length);
+            forecastData = [];
+            
+            const grid = document.getElementById('forecastGrid');
+            grid.innerHTML = '';
+            
+            let maxGust = 0;
+            let dangerHours = [];
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                const speed = Math.round(hourly.wind_speed_10m[i]);
+                const gust = Math.round(hourly.wind_gusts_10m[i]);
+                const dir = hourly.wind_direction_10m[i];
+                const temp = Math.round(hourly.temperature_2m[i]);
+                const timeStr = formatHour(hourly.time[i]);
+                const isNow = i === startIndex;
+                
+                if (gust > maxGust) maxGust = gust;
+                if (gust > 50) dangerHours.push(timeStr);
+                
+                forecastData.push({ time: timeStr, speed, gust, dir, temp });
+                
+                const item = document.createElement('div');
+                item.className = 'forecast-item' + (isNow ? ' highlight' : '');
+                item.innerHTML = `
+                    <div class="time">${isNow ? 'AHORA' : timeStr}</div>
+                    <div class="dir-icon" style="color:${windColor(speed)}">${getArrowUnicode(dir)}</div>
+                    <div class="speed">${speed}</div>
+                    <div class="gust">raf ${gust}</div>
+                    <div class="temp">${temp}°</div>
+                `;
+                grid.appendChild(item);
+            }
+            
+            const alertBox = document.getElementById('alertBox');
+            if (dangerHours.length > 0 && !alertBox.classList.contains('show')) {
+                alertBox.className = 'alert-box danger show';
+                alertBox.textContent = `🚨 Alerta: ráfagas >50 km/h previstas a las ${dangerHours.join(', ')}.`;
+            } else if (maxGust > 40 && !alertBox.classList.contains('show')) {
+                alertBox.className = 'alert-box show';
+                alertBox.textContent = `⚠️ Máximas ráfagas previstas: ${maxGust} km/h.`;
+            }
+            
+            drawChart();
+        }
+        
+        function drawChart() {
+            const canvas = document.getElementById('windChart');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const w = rect.width, h = rect.height;
+            const pad = { t: 20, r: 10, b: 30, l: 35 };
+            const cw = w - pad.l - pad.r;
+            const ch = h - pad.t - pad.b;
+            
+            ctx.clearRect(0, 0, w, h);
+            if (forecastData.length === 0) return;
+            
+            const maxVal = Math.max(...forecastData.map(d => d.gust), ...forecastData.map(d => d.speed)) * 1.2;
+            
+            // Grid
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 4; i++) {
+                const y = pad.t + (ch / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(pad.l, y);
+                ctx.lineTo(w - pad.r, y);
+                ctx.stroke();
+                ctx.fillStyle = '#64748b';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), pad.l - 6, y + 3);
+            }
+            
+            // Área velocidad
+            ctx.beginPath();
+            forecastData.forEach((d, i) => {
+                const x = pad.l + (cw / (forecastData.length - 1)) * i;
+                const y = pad.t + ch - (d.speed / maxVal) * ch;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.lineTo(pad.l + cw, pad.t + ch);
+            ctx.lineTo(pad.l, pad.t + ch);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+            ctx.fill();
+            
+            // Línea velocidad
+            ctx.beginPath();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            forecastData.forEach((d, i) => {
+                const x = pad.l + (cw / (forecastData.length - 1)) * i;
+                const y = pad.t + ch - (d.speed / maxVal) * ch;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            
+            // Línea ráfagas
+            ctx.beginPath();
+            ctx.strokeStyle = '#f87171';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 3]);
+            forecastData.forEach((d, i) => {
+                const x = pad.l + (cw / (forecastData.length - 1)) * i;
+                const y = pad.t + ch - (d.gust / maxVal) * ch;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Puntos
+            forecastData.forEach((d, i) => {
+                const x = pad.l + (cw / (forecastData.length - 1)) * i;
+                const y = pad.t + ch - (d.speed / maxVal) * ch;
+                ctx.beginPath();
+                ctx.fillStyle = '#0f172a';
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.fillStyle = '#38bdf8';
+                ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Labels hora
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            forecastData.forEach((d, i) => {
+                const x = pad.l + (cw / (forecastData.length - 1)) * i;
+                ctx.fillText(d.time, x, h - 8);
+            });
+            
+            // Leyenda
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(w - 95, 6, 12, 3);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Viento', w - 78, 10);
+            ctx.fillStyle = '#f87171';
+            ctx.fillRect(w - 40, 6, 12, 3);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('Ráfagas', w - 23, 10);
+        }
+        
+        // Auto-detectar al cargar
+        window.addEventListener('load', () => {
+            renderFavorites();
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        currentLat = pos.coords.latitude;
+                        currentLon = pos.coords.longitude;
+                        document.getElementById('cityInput').value = `${currentLat.toFixed(3)}, ${currentLon.toFixed(3)}`;
+                        fetchWeather(currentLat, currentLon);
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+        });
+        
+        window.addEventListener('resize', drawChart);
+    </script>
+</body>
+</html>
+
