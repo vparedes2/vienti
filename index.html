@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Viento Local v10.0</title>
+  <title>Viento Local v11.0</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -36,7 +36,7 @@
   <header>
     <h1>🌬️ Viento Local</h1>
     <p>Multi‑fuente · próximas 8 horas · GPS + mapa satelital</p>
-    <div class="version">v10.0</div>
+    <div class="version">v11.0</div>
   </header>
 
   <div class="controls">
@@ -112,7 +112,7 @@
 </div>
 
 <script>
-const VERSION='v10.0';
+const VERSION='v11.0';
 let map=null, windLayer=null, gpsMarker=null, accuracyCircle=null, currentLat=null, currentLon=null, currentCity='', currentAccuracy=null, locationMode='';
 let forecastData=[];
 let favorites=JSON.parse(localStorage.getItem('windFavoritesV10')||localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
@@ -138,7 +138,48 @@ $('searchBtn').addEventListener('click',searchCity);
 $('cityInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchCity();});
 window.addEventListener('resize',()=>{if(forecastData.length)drawChart();});
 
-function getGPS(){if(!navigator.geolocation){showStatus('Tu navegador no soporta geolocalización','error');return;}showStatus('Solicitando permiso GPS...','loading');navigator.geolocation.getCurrentPosition(pos=>{currentLat=pos.coords.latitude;currentLon=pos.coords.longitude;currentAccuracy=pos.coords.accuracy||null;locationMode='gps';currentCity='Mi posición GPS';$('cityInput').value=`GPS ${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;showLocationInfo();fetchAll(currentLat,currentLon);},err=>{let msg='Error GPS';if(err.code===1)msg='Permiso de ubicación denegado. Revisá permisos del sitio.';if(err.code===2)msg='Ubicación no disponible. Activá GPS/datos.';if(err.code===3)msg='Tiempo de espera GPS agotado.';showStatus(msg,'error');},{enableHighAccuracy:true,timeout:25000,maximumAge:0});}
+function getGPS(){
+    if(!navigator.geolocation){showStatus('Tu navegador no soporta geolocalización','error');return;}
+    showStatus('Solicitando permiso GPS... si tarda, revisá permisos del sitio','loading');
+    let finished=false;
+
+    function ok(pos){
+        if(finished) return;
+        finished=true;
+        currentLat=pos.coords.latitude;
+        currentLon=pos.coords.longitude;
+        currentAccuracy=pos.coords.accuracy||null;
+        locationMode='gps';
+        currentCity='Mi posición GPS';
+        $('cityInput').value=`GPS ${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;
+        showLocationInfo();
+        fetchAll(currentLat,currentLon);
+    }
+
+    function fail(err){
+        if(finished) return;
+        finished=true;
+        let msg='Error GPS';
+        if(err && err.code===1) msg='Permiso de ubicación denegado. En Chrome: candado/ajustes del sitio → Ubicación → Permitir.';
+        else if(err && err.code===2) msg='Ubicación no disponible. Activá GPS/datos y probá de nuevo.';
+        else if(err && err.code===3) msg='Tiempo de espera GPS agotado. Probá buscar ciudad o activar ubicación precisa.';
+        showStatus(msg,'error');
+    }
+
+    // Watchdog: algunos Chrome Android quedan esperando permiso sin devolver error.
+    const watchdog=setTimeout(()=>{
+        if(!finished){
+            showStatus('GPS demorado: intento con precisión aproximada...','loading');
+            navigator.geolocation.getCurrentPosition(ok, fail, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
+        }
+    },9000);
+
+    navigator.geolocation.getCurrentPosition(
+        pos=>{clearTimeout(watchdog);ok(pos);},
+        err=>{clearTimeout(watchdog);fail(err);},
+        {enableHighAccuracy:false, timeout:15000, maximumAge:300000}
+    );
+}
 
 async function searchCity(){const q=$('cityInput').value.trim();if(!q)return;showStatus('Buscando ubicación...','loading');try{let url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=es&format=json`;let res=await fetch(url);let data=await res.json();if(!res.ok||!data.results?.length)throw new Error('Ciudad no encontrada');let r=data.results.find(x=>x.country_code==='AR')||data.results[0];currentLat=r.latitude;currentLon=r.longitude;currentAccuracy=null;locationMode='search';currentCity=[r.name,r.admin1,r.country].filter(Boolean).join(', ');$('cityInput').value=currentCity;showLocationInfo();fetchAll(currentLat,currentLon);}catch(e){showStatus('No se pudo encontrar la ciudad: '+e.message,'error');}}
 
