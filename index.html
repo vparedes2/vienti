@@ -1,205 +1,71 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0f172a" />
-  <title>Viento Local v11.0</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
-    .container{max-width:980px;margin:0 auto}
-    header{text-align:center;padding:14px 12px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);border-bottom:1px solid #334155;position:sticky;top:0;z-index:1000}
-    header h1{font-size:1.25rem;color:#38bdf8}
-    header p{font-size:.72rem;color:#94a3b8;margin-top:2px}.version{font-size:.68rem;color:#64748b;margin-top:3px}
-    .controls{padding:12px;background:#1e293b;border-bottom:1px solid #334155}.location-bar{display:grid;grid-template-columns:1fr auto auto;gap:8px}.location-bar input{min-width:0;background:#0f172a;border:1px solid #475569;color:#e2e8f0;padding:11px 12px;border-radius:10px;font-size:.9rem;outline:none}.btn{background:#0ea5e9;color:white;border:none;padding:10px 12px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap}.btn:active{transform:scale(.97)}.btn-secondary{background:#334155}.btn-success{background:#10b981}.btn-warning{background:#f59e0b;color:#111827}.btn-small{padding:8px 10px;font-size:.75rem}
-    .save-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}.save-row input{min-width:0;background:#0f172a;border:1px solid #475569;color:#e2e8f0;padding:10px 12px;border-radius:10px;font-size:.85rem;outline:none}
-    .favorites{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}.fav-chip{background:#0f172a;border:1px solid #475569;color:#94a3b8;padding:5px 10px;border-radius:20px;font-size:.75rem;cursor:pointer;display:flex;align-items:center;gap:6px}.fav-chip .remove{color:#ef4444;font-weight:bold}
-    .status{text-align:center;padding:12px 16px;color:#94a3b8;font-size:.86rem}.status.error{color:#f87171}.status.loading{color:#38bdf8}.status.ok{color:#10b981}
-    .hidden{display:none!important}.card{background:#1e293b;border:1px solid #334155;border-radius:16px;margin:12px;overflow:hidden}.card-header{padding:11px 14px;border-bottom:1px solid #334155;font-size:.84rem;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;gap:8px}.card-header strong{color:#e2e8f0}
-    #map{height:300px;width:100%;background:#0f172a}.map-wrap{position:relative}.cardinal-overlay{position:absolute;inset:0;z-index:650;pointer-events:none;font-weight:800;color:#fff;text-shadow:0 2px 6px #000;font-size:.85rem}.cardinal-overlay span{position:absolute;background:rgba(15,23,42,.55);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:3px 7px}.cardinal-overlay .n{top:8px;left:50%;transform:translateX(-50%)}.cardinal-overlay .s{bottom:8px;left:50%;transform:translateX(-50%)}.cardinal-overlay .e{right:8px;top:50%;transform:translateY(-50%)}.cardinal-overlay .w{left:8px;top:50%;transform:translateY(-50%)}
-    .current-wind{text-align:center;padding:22px 16px}.wind-speed{font-size:4.8rem;font-weight:850;color:#38bdf8;line-height:1}.wind-unit{font-size:1.15rem;color:#64748b}.wind-dir{margin-top:12px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:1rem;flex-wrap:wrap}.compass{width:54px;height:54px;border:3px solid #475569;border-radius:50%;position:relative;background:#0f172a}.compass-arrow{position:absolute;top:50%;left:50%;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:22px solid #f59e0b;transform-origin:50% 100%;margin-left:-6px;margin-top:-22px}.compass-labels span{position:absolute;font-size:.55rem;color:#64748b;font-weight:bold}.compass-labels .n{top:2px;left:50%;transform:translateX(-50%)}.compass-labels .e{right:3px;top:50%;transform:translateY(-50%)}.compass-labels .s{bottom:2px;left:50%;transform:translateX(-50%)}.compass-labels .w{left:3px;top:50%;transform:translateY(-50%)}
-    .wind-detail{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 14px 14px}.detail-box{background:#0f172a;border-radius:12px;padding:11px;text-align:center}.detail-box .label{font-size:.66rem;color:#64748b;text-transform:uppercase;letter-spacing:.4px}.detail-box .value{font-size:1.05rem;font-weight:800;color:#e2e8f0;margin-top:4px}
-    .alert-box{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:12px 14px;font-size:.84rem;color:#fbbf24;margin:0 14px 14px;display:none}.alert-box.show{display:block}.alert-box.danger{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35);color:#fca5a5}
-    .forecast-grid{display:flex;gap:8px;overflow-x:auto;padding:0 14px 14px;scrollbar-width:none}.forecast-grid::-webkit-scrollbar{display:none}.forecast-item{min-width:72px;background:#0f172a;border-radius:12px;padding:11px 7px;text-align:center;border:2px solid transparent}.forecast-item.highlight{border-color:#0ea5e9;background:rgba(14,165,233,.1)}.forecast-item .time{font-size:.68rem;color:#64748b;margin-bottom:8px}.forecast-item .dir-icon{font-size:1.45rem;margin:4px 0}.forecast-item .speed{font-size:1.08rem;font-weight:800;color:#e2e8f0}.forecast-item .gust{font-size:.68rem;color:#f87171;margin-top:2px}.forecast-item .src{font-size:.62rem;color:#64748b;margin-top:4px}
-    .chart-container{height:170px;padding:0 14px 14px}canvas{width:100%;height:100%}.sources-table{width:100%;border-collapse:collapse;font-size:.78rem}.sources-table th,.sources-table td{padding:9px 8px;border-bottom:1px solid #334155;text-align:left}.sources-table th{color:#94a3b8;font-weight:700}.badge{font-size:.68rem;border-radius:99px;padding:3px 8px;background:#0f172a;color:#94a3b8;border:1px solid #334155}.badge.ok{color:#10b981;border-color:rgba(16,185,129,.4)}.badge.err{color:#f87171;border-color:rgba(248,113,113,.4)}
-    .windy-frame{width:100%;height:360px;border:0;background:#0f172a}.note{font-size:.72rem;color:#64748b;padding:0 14px 12px;line-height:1.35}.config-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:0 14px 14px}.config-row input{min-width:0;background:#0f172a;border:1px solid #475569;color:#e2e8f0;padding:10px 12px;border-radius:10px;font-size:.8rem;outline:none}.last-update{text-align:center;font-size:.7rem;color:#475569;padding:16px}
-    @media(max-width:520px){.location-bar{grid-template-columns:1fr 44px 76px}.btn{padding:10px 9px}.save-row{grid-template-columns:1fr}.wind-speed{font-size:4.1rem}.wind-detail{grid-template-columns:repeat(3,1fr);gap:7px}.detail-box{padding:9px 5px}.windy-frame{height:320px}.card{margin:10px 8px}.controls{padding:10px}}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0f172a" />
+<title>Viento Local - v12.0</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}.container{max-width:1180px;margin:0 auto}header{text-align:center;padding:18px 14px;background:linear-gradient(180deg,#0f172a,#1e293b);border-bottom:1px solid #334155}h1{font-size:1.45rem;color:#38bdf8}.sub{font-size:.85rem;color:#94a3b8;margin-top:4px}.version{font-size:.72rem;color:#64748b;margin-top:3px}.controls{padding:14px;background:#1e293b;border-bottom:1px solid #334155}.row{display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-bottom:10px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.controls input{width:100%;background:#0f172a;border:1px solid #475569;color:#e2e8f0;padding:12px;border-radius:12px;font-size:1rem;outline:none}.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;color:white;background:#0ea5e9;cursor:pointer;white-space:nowrap}.btn:active{transform:scale(.98)}.btn-secondary{background:#334155}.btn-success{background:#10b981}.fav{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;color:#64748b}.chip{background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:20px;padding:6px 10px;font-size:.8rem;cursor:pointer}.chip b{color:#ef4444;margin-left:6px}.status{text-align:center;padding:14px;color:#94a3b8}.ok{color:#10b981}.error{color:#f87171}.loading{color:#38bdf8}.hidden{display:none!important}.card{background:#1e293b;border:1px solid #334155;border-radius:18px;margin:14px;overflow:hidden}.card-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #334155;color:#bfdbfe}.mapWrap{position:relative}.map{height:380px;width:100%;background:#0f172a}.cardinals{pointer-events:none}.cardinals span{position:absolute;z-index:500;background:rgba(15,23,42,.75);border:1px solid #475569;color:white;font-weight:800;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center}.n{top:12px;left:50%;transform:translateX(-50%)}.s{bottom:12px;left:50%;transform:translateX(-50%)}.e{right:12px;top:50%;transform:translateY(-50%)}.w{left:12px;top:50%;transform:translateY(-50%)}.map-note{font-size:.75rem;color:#94a3b8;padding:8px 16px}.gpsbox{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px;background:#0f172a;border-bottom:1px solid #334155}.gpsbox div{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px;text-align:center}.gpsbox span{display:block;font-size:.7rem;color:#64748b;text-transform:uppercase}.gpsbox b{display:block;margin-top:4px;color:#e2e8f0;font-size:.9rem}.current{text-align:center;padding:24px 16px}.speed{font-size:5rem;font-weight:900;line-height:1;color:#38bdf8}.unit{font-size:1.25rem;color:#64748b}.dirline{margin-top:10px;font-size:1.1rem}.details{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 16px 16px}.box{background:#0f172a;border-radius:14px;padding:13px;text-align:center}.box .label{font-size:.7rem;color:#64748b;text-transform:uppercase}.box .val{font-size:1.25rem;font-weight:800;margin-top:5px}.forecast{display:flex;gap:8px;overflow-x:auto;padding:0 16px 16px}.fitem{min-width:74px;background:#0f172a;border-radius:12px;text-align:center;padding:10px 8px}.fitem .time{font-size:.7rem;color:#64748b}.fitem .arrow{font-size:1.6rem;margin:4px 0}.fitem .fspeed{font-weight:800}.fitem .gust{font-size:.7rem;color:#f87171}.sources{padding:0 16px 16px}.sources table{width:100%;border-collapse:collapse;font-size:.82rem}.sources th,.sources td{border-bottom:1px solid #334155;padding:8px;text-align:left}.windy{width:100%;height:420px;border:0;background:#0f172a}.last{text-align:center;color:#475569;font-size:.72rem;padding:16px}@media(max-width:620px){.row{grid-template-columns:1fr 58px 92px}.row2{grid-template-columns:1fr}.btn{padding:11px 10px}.map{height:310px}.speed{font-size:4rem}.details,.gpsbox{grid-template-columns:1fr 1fr 1fr}.card{margin:12px 10px}}
+</style>
 </head>
 <body>
 <div class="container">
-  <header>
-    <h1>🌬️ Viento Local</h1>
-    <p>Multi‑fuente · próximas 8 horas · GPS + mapa satelital</p>
-    <div class="version">v11.0</div>
-  </header>
-
-  <div class="controls">
-    <div class="location-bar">
-      <input type="text" id="cityInput" placeholder="Buscar ciudad, yacimiento o zona..." />
-      <button class="btn btn-secondary" id="searchBtn">🔍</button>
-      <button class="btn" id="gpsBtn">📍 GPS</button>
-    </div>
-    <div class="save-row">
-      <input type="text" id="favName" placeholder="Nombre para guardar posición. Ej: R1 Troncal, BAN Piletas..." />
-      <button class="btn btn-success" id="saveBtn">⭐ Guardar</button>
-    </div>
-    <div class="favorites" id="favoritesList"><span style="font-size:.75rem;color:#64748b;">Favoritos:</span></div>
+<header><h1>🌬️ Viento Local</h1><p class="sub">Pronóstico horario · Próximas 8 horas · GPS + Mapa</p><p class="version">v12.0</p></header>
+<section class="controls">
+  <div class="row"><input id="cityInput" placeholder="Buscar ciudad... ej. Neuquén" autocomplete="off"><button id="searchBtn" class="btn btn-secondary">🔍</button><button id="gpsBtn" class="btn">📍 GPS</button></div>
+  <div class="row2"><button id="saveBtn" class="btn btn-success">⭐ Guardar posición</button><button id="satBtn" class="btn btn-secondary">🛰️ Satélite</button></div>
+  <div id="favoritesList" class="fav"><span>Favoritos:</span></div>
+</section>
+<div id="status" class="status">Tocá 📍 para usar tu ubicación o buscá una ciudad</div>
+<main id="mainContent" class="hidden">
+ <div class="card">
+  <div class="card-header"><span>🗺️ Mapa satelital con flechas hacia donde va el viento</span><span>km/h</span></div>
+  <div class="gpsbox">
+    <div><span>Origen</span><b id="positionSource">--</b></div><div><span>Coordenadas</span><b id="coordText">--</b></div><div><span>Precisión GPS</span><b id="accuracyText">--</b></div>
   </div>
-
-  <div id="status" class="status">Tocá GPS o buscá una ciudad</div>
-
-  <div id="mainContent" class="hidden">
-    <div class="card">
-      <div class="card-header"><span>🗺️ Mapa satelital con flechas hacia donde va el viento</span><span>km/h</span></div>
-      <div class="map-wrap">
-        <div id="map"></div>
-        <div class="cardinal-overlay"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">O</span></div>
-      </div>
-      <div class="note">Importante: las APIs informan la dirección meteorológica, es decir, de dónde viene el viento. En este mapa la flecha se rota +180° para mostrar hacia dónde va.</div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><span>🌡️ Viento actual consolidado</span><strong id="sourceUsed">--</strong></div>
-      <div class="current-wind">
-        <div class="wind-speed" id="currentSpeed">--</div>
-        <div class="wind-unit">km/h</div>
-        <div class="wind-dir">
-          <div class="compass">
-            <div class="compass-labels"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">O</span></div>
-            <div class="compass-arrow" id="compassArrow"></div>
-          </div>
-          <span id="currentDir">--</span>
-        </div>
-      </div>
-      <div class="wind-detail">
-        <div class="detail-box"><div class="label">Ráfagas</div><div class="value" id="currentGust">--</div></div>
-        <div class="detail-box"><div class="label">Va hacia</div><div class="value" id="goesTo">--</div></div>
-        <div class="detail-box"><div class="label">Temp.</div><div class="value" id="currentTemp">--</div></div>
-      </div>
-      <div class="alert-box" id="alertBox"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><span>📊 Pronóstico 8 horas</span><strong>Open‑Meteo + MET</strong></div>
-      <div class="chart-container"><canvas id="windChart"></canvas></div>
-      <div class="forecast-grid" id="forecastGrid"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><span>🔁 Comparación multi‑fuente</span><strong id="sourceCount">--</strong></div>
-      <div style="overflow:auto;">
-        <table class="sources-table">
-          <thead><tr><th>Fuente</th><th>Estado</th><th>Viento</th><th>Ráfaga</th><th>Viene de</th><th>Va hacia</th></tr></thead>
-          <tbody id="sourcesBody"></tbody>
-        </table>
-      </div>
-      <div class="note">Sistema multi‑fuente sin claves: Open‑Meteo como fuente principal y MET Norway como respaldo/comparación.</div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><span>🌎 Windy integrado</span><strong>overlay wind</strong></div>
-      <iframe id="windyFrame" class="windy-frame" allowfullscreen></iframe>
-      <div class="note">Windy se muestra como visualización externa embebida. Los datos numéricos operativos de la app se toman de las APIs de la tabla multi‑fuente.</div>
-    </div>
-  </div>
-  <div class="last-update" id="lastUpdate"></div>
+  <div class="mapWrap"><div id="map" class="map"></div><div class="cardinals"><span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">O</span></div></div>
+  <p class="map-note">Importante: las APIs informan la dirección meteorológica, de dónde viene el viento. En este mapa la flecha rota +180° para mostrar hacia dónde va.</p>
+ </div>
+ <div class="card"><div class="current"><div id="currentSpeed" class="speed">--</div><div class="unit">km/h</div><div id="currentDir" class="dirline">--</div></div><div class="details"><div class="box"><div class="label">Ráfagas</div><div id="currentGust" class="val">--</div></div><div class="box"><div class="label">Temperatura</div><div id="currentTemp" class="val">--</div></div><div class="box"><div class="label">Humedad</div><div id="currentHum" class="val">--</div></div></div></div>
+ <div class="card"><div class="card-header"><span>📊 Pronóstico 8 horas</span><span>Open-Meteo</span></div><div id="forecastGrid" class="forecast"></div></div>
+ <div class="card"><div class="card-header"><span>🔁 Comparación multi-fuente</span><span>Actual</span></div><div class="sources"><table><thead><tr><th>Fuente</th><th>Viento</th><th>Dirección</th><th>Ráfaga</th><th>Estado</th></tr></thead><tbody id="sourceRows"></tbody></table></div></div>
+ <div class="card"><div class="card-header"><span>🌪️ Windy integrado</span><span>capa viento</span></div><iframe id="windyFrame" class="windy" loading="lazy"></iframe></div>
+</main><div id="lastUpdate" class="last"></div>
 </div>
-
 <script>
-const VERSION='v11.0';
-let map=null, windLayer=null, gpsMarker=null, accuracyCircle=null, currentLat=null, currentLon=null, currentCity='', currentAccuracy=null, locationMode='';
-let forecastData=[];
-let favorites=JSON.parse(localStorage.getItem('windFavoritesV10')||localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
+'use strict';
+const VERSION='v12.0';
+let map=null, windLayer=null, gpsMarker=null, tileLayer=null;
+let currentLat=null,currentLon=null,currentCity='',currentAccuracy=null,lastSource='--';
+let favorites=[];
+try{favorites=JSON.parse(localStorage.getItem('windFavorites')||'[]')}catch{favorites=[]}
 const $=id=>document.getElementById(id);
-
-function showStatus(msg,type=''){const el=$('status');el.textContent=msg;el.className='status '+type;}
-function showLocationInfo(){const el=$('locationInfo'); if(currentLat==null||currentLon==null){el.textContent='';return;} const acc=currentAccuracy?` · precisión aprox. ±${Math.round(currentAccuracy)} m`:''; const modo=locationMode==='gps'?'📍 GPS real del dispositivo':'🔎 Ciudad buscada'; el.textContent=`${modo}: ${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}${acc}`;}
-function kphFromMs(v){return v==null?null:v*3.6}
-function round(v){return v==null||Number.isNaN(v)?null:Math.round(v)}
-function degNorm(d){return ((d%360)+360)%360}
-function degToCardinal(deg){if(deg==null)return'--';const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return dirs[Math.round(degNorm(deg)/22.5)%16]}
-function windToDeg(fromDeg){return degNorm(fromDeg+180)}
-function arrowTo(whereDeg){const arrows=['↑','↗','→','↘','↓','↙','←','↖'];return arrows[Math.round(degNorm(whereDeg)/45)%8]}
-function windColor(speed){if(speed<10)return'#10b981';if(speed<20)return'#38bdf8';if(speed<30)return'#f59e0b';if(speed<40)return'#f97316';return'#ef4444'}
-function formatHour(iso){return new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
-
-function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV10',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
-renderFavorites();
-
-$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV10',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
-$('gpsBtn').addEventListener('click',getGPS);
-$('searchBtn').addEventListener('click',searchCity);
-$('cityInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchCity();});
-window.addEventListener('resize',()=>{if(forecastData.length)drawChart();});
-
-function getGPS(){
-    if(!navigator.geolocation){showStatus('Tu navegador no soporta geolocalización','error');return;}
-    showStatus('Solicitando permiso GPS... si tarda, revisá permisos del sitio','loading');
-    let finished=false;
-
-    function ok(pos){
-        if(finished) return;
-        finished=true;
-        currentLat=pos.coords.latitude;
-        currentLon=pos.coords.longitude;
-        currentAccuracy=pos.coords.accuracy||null;
-        locationMode='gps';
-        currentCity='Mi posición GPS';
-        $('cityInput').value=`GPS ${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;
-        showLocationInfo();
-        fetchAll(currentLat,currentLon);
-    }
-
-    function fail(err){
-        if(finished) return;
-        finished=true;
-        let msg='Error GPS';
-        if(err && err.code===1) msg='Permiso de ubicación denegado. En Chrome: candado/ajustes del sitio → Ubicación → Permitir.';
-        else if(err && err.code===2) msg='Ubicación no disponible. Activá GPS/datos y probá de nuevo.';
-        else if(err && err.code===3) msg='Tiempo de espera GPS agotado. Probá buscar ciudad o activar ubicación precisa.';
-        showStatus(msg,'error');
-    }
-
-    // Watchdog: algunos Chrome Android quedan esperando permiso sin devolver error.
-    const watchdog=setTimeout(()=>{
-        if(!finished){
-            showStatus('GPS demorado: intento con precisión aproximada...','loading');
-            navigator.geolocation.getCurrentPosition(ok, fail, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
-        }
-    },9000);
-
-    navigator.geolocation.getCurrentPosition(
-        pos=>{clearTimeout(watchdog);ok(pos);},
-        err=>{clearTimeout(watchdog);fail(err);},
-        {enableHighAccuracy:false, timeout:15000, maximumAge:300000}
-    );
-}
-
-async function searchCity(){const q=$('cityInput').value.trim();if(!q)return;showStatus('Buscando ubicación...','loading');try{let url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=es&format=json`;let res=await fetch(url);let data=await res.json();if(!res.ok||!data.results?.length)throw new Error('Ciudad no encontrada');let r=data.results.find(x=>x.country_code==='AR')||data.results[0];currentLat=r.latitude;currentLon=r.longitude;currentAccuracy=null;locationMode='search';currentCity=[r.name,r.admin1,r.country].filter(Boolean).join(', ');$('cityInput').value=currentCity;showLocationInfo();fetchAll(currentLat,currentLon);}catch(e){showStatus('No se pudo encontrar la ciudad: '+e.message,'error');}}
-
-function initMap(lat,lon){if(!map){map=L.map('map',{zoomControl:true}).setView([lat,lon],10);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:19}).addTo(map);}else map.setView([lat,lon],10);setTimeout(()=>map.invalidateSize(),200);}
-
-function makeWindIcon(speed,fromDeg){const to=windToDeg(fromDeg);const color=windColor(speed);return L.divIcon({className:'wind-marker',html:`<div style="transform:rotate(${to}deg);color:${color};font-size:${22+Math.min(speed,50)/4}px;text-shadow:0 0 10px ${color}99;">➤</div>`,iconSize:[34,34],iconAnchor:[17,17]});}
-async function addWindMarkers(lat,lon){if(windLayer)map.removeLayer(windLayer);windLayer=L.layerGroup().addTo(map);const offsets=[[0,0],[.05,0],[-.05,0],[0,.05],[0,-.05],[.03,.03],[-.03,-.03],[.03,-.03],[-.03,.03]];for(const [dLat,dLon] of offsets){try{const pLat=lat+dLat,pLon=lon+dLon;const d=await fetchOpenMeteo(pLat,pLon,false);if(d.current){const s=round(d.current.speed), g=round(d.current.gust), dir=d.current.dir;L.marker([pLat,pLon],{icon:makeWindIcon(s,dir)}).addTo(windLayer).bindPopup(`<div style="text-align:center;font-size:.85rem"><b style="font-size:1.2rem;color:#38bdf8">${s} km/h</b><br>Viene de ${degToCardinal(dir)} ${round(dir)}°<br>Va hacia ${degToCardinal(windToDeg(dir))}<br>Ráf: ${g??'--'} km/h</div>`);}}catch(e){}}
-}
-
-async function fetchOpenMeteo(lat,lon,withHourly=true){const hourly=withHourly?'&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m':'';const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m${hourly}&forecast_days=2&timezone=auto`;const res=await fetch(url);const data=await res.json();if(!res.ok||data.error)throw new Error(data.reason||'Open‑Meteo error');return{source:'Open‑Meteo',current:{speed:data.current?.wind_speed_10m,gust:data.current?.wind_gusts_10m,dir:data.current?.wind_direction_10m,temp:data.current?.temperature_2m,hum:data.current?.relative_humidity_2m},hourly:data.hourly};}
-async function fetchMET(lat,lon){const url=`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;const res=await fetch(url);const data=await res.json();if(!res.ok)throw new Error('MET Norway HTTP '+res.status);const ts=data.properties?.timeseries||[];const now=ts[0]?.data?.instant?.details;if(!now)throw new Error('MET sin datos');const next=ts.map(x=>({time:x.time,d:x.data?.instant?.details})).filter(x=>x.d).slice(0,12);return{source:'MET Norway',current:{speed:kphFromMs(now.wind_speed),gust:kphFromMs(now.wind_speed_of_gust),dir:now.wind_from_direction,temp:now.air_temperature,hum:now.relative_humidity},hourly:next.map(x=>({time:x.time,speed:kphFromMs(x.d.wind_speed),gust:kphFromMs(x.d.wind_speed_of_gust),dir:x.d.wind_from_direction,temp:x.d.air_temperature}))};}
-
-async function fetchAll(lat,lon){showStatus('Consultando fuentes meteorológicas...','loading');$('mainContent').classList.add('hidden');initMap(lat,lon);updateWindy(lat,lon);const results=[];const tasks=[fetchOpenMeteo(lat,lon,true),fetchMET(lat,lon)];const settled=await Promise.allSettled(tasks);settled.forEach((r,i)=>{const name=['Open‑Meteo','MET Norway'][i];if(r.status==='fulfilled'&&r.value)results.push({...r.value,ok:true});else results.push({source:name,ok:false,error:r.reason?.message||'No configurado / sin respuesta'});});const valid=results.filter(r=>r.ok&&r.current?.speed!=null&&r.current?.dir!=null);if(!valid.length){renderSources(results);showStatus('No se pudo obtener viento de ninguna fuente','error');return;}const consolidated=consolidate(valid);renderCurrent(consolidated,valid);renderForecast(results);renderSources(results);addWindMarkers(lat,lon);$('mainContent').classList.remove('hidden');setTimeout(()=>{if(map){map.invalidateSize();map.setView([lat,lon],10);}},100);setTimeout(()=>{if(map)map.invalidateSize();},600);showStatus('Datos cargados correctamente · '+VERSION,'ok');$('lastUpdate').textContent='Actualizado: '+new Date().toLocaleString('es-AR')+' · '+VERSION;}
-function consolidate(valid){const speeds=valid.map(v=>v.current.speed).filter(v=>v!=null);const gusts=valid.map(v=>v.current.gust).filter(v=>v!=null);const temps=valid.map(v=>v.current.temp).filter(v=>v!=null);const hums=valid.map(v=>v.current.hum).filter(v=>v!=null);let x=0,y=0;valid.forEach(v=>{const rad=degNorm(v.current.dir)*Math.PI/180;x+=Math.sin(rad);y+=Math.cos(rad);});const dir=degNorm(Math.atan2(x/valid.length,y/valid.length)*180/Math.PI);return{source:valid.map(v=>v.source).join(' + '),speed:speeds.reduce((a,b)=>a+b,0)/speeds.length,gust:gusts.length?Math.max(...gusts):null,dir,temp:temps.length?temps.reduce((a,b)=>a+b,0)/temps.length:null,hum:hums.length?hums.reduce((a,b)=>a+b,0)/hums.length:null};}
-function renderCurrent(cur,valid){const speed=round(cur.speed), gust=round(cur.gust), dir=cur.dir, to=windToDeg(dir);$('sourceUsed').textContent=valid.length>1?'Promedio multi‑fuente':valid[0].source;$('currentSpeed').textContent=speed;$('currentSpeed').style.color=windColor(speed);$('currentDir').textContent=`Viene de ${degToCardinal(dir)} ${round(dir)}°`;$('goesTo').textContent=degToCardinal(to);$('currentGust').textContent=gust==null?'--':gust+' km/h';$('currentTemp').textContent=cur.temp==null?'--':round(cur.temp)+'°';$('compassArrow').style.transform=`rotate(${dir}deg)`;const a=$('alertBox');if(gust>50){a.className='alert-box danger show';a.textContent=`🚨 RÁFAGAS CRÍTICAS: ${gust} km/h. Evaluar suspensión de izajes, trabajos en altura y tareas expuestas.`;}else if(gust>40){a.className='alert-box show';a.textContent=`⚠️ Ráfagas de ${gust} km/h. Precaución en operaciones expuestas.`;}else{a.className='alert-box';a.textContent='';}}
-function renderForecast(results){const om=results.find(r=>r.source==='Open‑Meteo'&&r.ok&&r.hourly);const met=results.find(r=>r.source==='MET Norway'&&r.ok&&r.hourly);forecastData=[];const grid=$('forecastGrid');grid.innerHTML='';if(!om)return;const now=new Date();let start=0;for(let i=0;i<om.hourly.time.length;i++){if(new Date(om.hourly.time[i])>=now){start=i;break;}}for(let n=0;n<8;n++){const i=start+n;let speed=om.hourly.wind_speed_10m[i], gust=om.hourly.wind_gusts_10m[i], dir=om.hourly.wind_direction_10m[i], temp=om.hourly.temperature_2m[i];let src='OM';if(met?.hourly?.[n]){const m=met.hourly[n];speed=(speed+(m.speed??speed))/2;gust=Math.max(gust,m.gust??gust);dir=averageDeg([dir,m.dir]);temp=(temp+(m.temp??temp))/2;src='OM+MET';}const timeStr=n===0?'AHORA':formatHour(om.hourly.time[i]);const to=windToDeg(dir);const item={time:timeStr,speed:round(speed),gust:round(gust),dir,to,temp:round(temp),src};forecastData.push(item);const el=document.createElement('div');el.className='forecast-item'+(n===0?' highlight':'');el.innerHTML=`<div class="time">${timeStr}</div><div class="dir-icon" style="color:${windColor(item.speed)};transform:rotate(${to}deg)">➤</div><div class="speed">${item.speed}</div><div class="gust">raf ${item.gust}</div><div class="src">${src}</div>`;grid.appendChild(el);}drawChart();}
-function averageDeg(arr){let x=0,y=0,c=0;arr.forEach(d=>{if(d!=null){let r=degNorm(d)*Math.PI/180;x+=Math.sin(r);y+=Math.cos(r);c++;}});return c?degNorm(Math.atan2(x/c,y/c)*180/Math.PI):null;}
-function renderSources(results){const body=$('sourcesBody');body.innerHTML='';let ok=0;results.forEach(r=>{if(r.ok)ok++;const c=r.current||{};const dir=c.dir;const tr=document.createElement('tr');tr.innerHTML=`<td>${r.source}</td><td>${r.ok?'<span class="badge ok">OK</span>':`<span class="badge err">${r.error||'Error'}</span>`}</td><td>${r.ok?round(c.speed)+' km/h':'--'}</td><td>${r.ok&&c.gust!=null?round(c.gust)+' km/h':'--'}</td><td>${r.ok?degToCardinal(dir)+' '+round(dir)+'°':'--'}</td><td>${r.ok?degToCardinal(windToDeg(dir)):'--'}</td>`;body.appendChild(tr);});$('sourceCount').textContent=ok+' activas';}
-function drawChart(){const canvas=$('windChart'),ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.scale(dpr,dpr);const w=rect.width,h=rect.height,p={t:18,r:10,b:28,l:34},cw=w-p.l-p.r,ch=h-p.t-p.b;ctx.clearRect(0,0,w,h);if(!forecastData.length)return;const maxVal=Math.max(...forecastData.map(d=>d.gust),...forecastData.map(d=>d.speed))*1.2;ctx.strokeStyle='#334155';ctx.lineWidth=.5;for(let i=0;i<=4;i++){const y=p.t+ch/4*i;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillStyle='#64748b';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(maxVal-(maxVal/4)*i),p.l-6,y+3);}drawLine('speed','#38bdf8',false);drawLine('gust','#f87171',true);ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='center';forecastData.forEach((d,i)=>{const x=p.l+(cw/(forecastData.length-1))*i;ctx.fillText(d.time,x,h-8);});function drawLine(key,color,dash){ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=key==='speed'?2.5:2;if(dash)ctx.setLineDash([4,3]);forecastData.forEach((d,i)=>{const x=p.l+(cw/(forecastData.length-1))*i,y=p.t+ch-(d[key]/maxVal)*ch;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();ctx.setLineDash([]);}}
-function updateWindy(lat,lon){const src=`https://embed.windy.com/embed2.html?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&detailLat=${lat.toFixed(4)}&detailLon=${lon.toFixed(4)}&zoom=8&level=surface&overlay=wind&product=ecmwf&menu=true&message=false&marker=true&calendar=now&metricWind=km%2Fh&metricTemp=%C2%B0C&type=map&location=coordinates`; $('windyFrame').src=src;}
+function setText(id,val){const el=$(id); if(el) el.textContent=val;}
+function status(msg,type=''){const el=$('status'); if(!el)return; el.textContent=msg; el.className='status '+type;}
+function degToCardinal(deg){const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return dirs[Math.round(deg/22.5)%16];}
+function windColor(s){if(s<10)return'#10b981';if(s<20)return'#38bdf8';if(s<30)return'#f59e0b';if(s<40)return'#f97316';return'#ef4444'}
+function arrowTo(degFrom){const degTo=(degFrom+180)%360;const arrows=['↑','↗','→','↘','↓','↙','←','↖'];return arrows[Math.round(degTo/45)%8];}
+function hour(iso){return new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});}
+function renderFavorites(){const list=$('favoritesList'); if(!list)return; list.innerHTML='<span>Favoritos:</span>'; favorites.forEach((f,i)=>{const c=document.createElement('span');c.className='chip';c.innerHTML=`${f.name}<b>×</b>`;c.onclick=(e)=>{if(e.target.tagName==='B'){favorites.splice(i,1);localStorage.setItem('windFavorites',JSON.stringify(favorites));renderFavorites();}else{loadLocation(f.lat,f.lon,f.name,'Favorito',null)}};list.appendChild(c);});}
+function saveFavorite(){if(currentLat==null||currentLon==null){status('Primero buscá una ciudad o usá GPS','error');return;}let def=currentCity||`${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;let name=prompt('Nombre para guardar esta posición:',def);if(!name)return;favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavorites',JSON.stringify(favorites));renderFavorites();status('Posición guardada: '+name,'ok');}
+async function searchCity(){const q=$('cityInput').value.trim();if(!q){status('Ingresá una ciudad','error');return;}status('Buscando ciudad...','loading');try{const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=es&format=json`;const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error('Geocoding HTTP '+res.status);const data=await res.json();if(!data.results||!data.results.length)throw new Error('sin resultados');let r=data.results.find(x=>x.country_code==='AR')||data.results[0];const name=[r.name,r.admin1,r.country].filter(Boolean).join(', ');$('cityInput').value=name;await loadLocation(r.latitude,r.longitude,name,'Ciudad',null);}catch(e){status('No se pudo encontrar la ciudad: '+e.message,'error');}}
+function getGPS(){if(!('geolocation'in navigator)){status('Este navegador no soporta GPS','error');return;}status('Solicitando permiso GPS...','loading');let finished=false;const timer=setTimeout(()=>{if(!finished)status('GPS demora demasiado. Revisá permisos de ubicación o probá búsqueda manual.','error')},20000);navigator.geolocation.getCurrentPosition(async pos=>{finished=true;clearTimeout(timer);currentAccuracy=pos.coords.accuracy;await loadLocation(pos.coords.latitude,pos.coords.longitude,'Mi posición GPS','GPS',currentAccuracy);},err=>{finished=true;clearTimeout(timer);let msg='Error GPS';if(err.code===1)msg='Permiso GPS denegado. Permití ubicación en el candado del navegador.';if(err.code===2)msg='Ubicación no disponible. Activá GPS o probá con datos móviles.';if(err.code===3)msg='Tiempo de espera GPS agotado. Intentá nuevamente.';status(msg,'error');},{enableHighAccuracy:true,timeout:15000,maximumAge:0});}
+async function loadLocation(lat,lon,name,source,accuracy){currentLat=Number(lat);currentLon=Number(lon);currentCity=name||'';lastSource=source||'--';currentAccuracy=accuracy;setText('positionSource',lastSource);setText('coordText',`${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`);setText('accuracyText',accuracy?`±${Math.round(accuracy)} m`:'--');status('Consultando fuentes meteorológicas...','loading');try{const [om,met]=await Promise.allSettled([fetchOpenMeteo(currentLat,currentLon),fetchMetNorway(currentLat,currentLon)]);if(om.status!=='fulfilled')throw new Error(om.reason.message||'Open-Meteo sin respuesta');renderAll(om.value,met.status==='fulfilled'?met.value:null);status('Datos cargados correctamente · '+VERSION,'ok');}catch(e){status('No se pudieron cargar datos: '+e.message,'error');}}
+async function fetchOpenMeteo(lat,lon){const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m&forecast_days=2&timezone=auto`;const res=await fetch(url,{cache:'no-store'});const data=await res.json();if(!res.ok||data.error)throw new Error(data.reason||'Open-Meteo HTTP '+res.status);return data;}
+async function fetchMetNorway(lat,lon){const url=`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error('MET Norway HTTP '+res.status);const data=await res.json();const now=data.properties.timeseries[0].data.instant.details;return {speed:now.wind_speed*3.6,dir:now.wind_from_direction,gust:now.wind_speed_of_gust?now.wind_speed_of_gust*3.6:null};}
+function renderAll(openMeteo,met){$('mainContent').classList.remove('hidden');renderCurrent(openMeteo.current);renderForecast(openMeteo.hourly);renderSources(openMeteo.current,met);initMap(currentLat,currentLon);addWindMarkers(currentLat,currentLon,openMeteo.current);updateWindy(currentLat,currentLon);setText('lastUpdate','Actualizado: '+new Date().toLocaleString('es-AR'));setTimeout(()=>{if(map)map.invalidateSize();},300);}
+function renderCurrent(cur){const speed=Math.round(cur.wind_speed_10m);setText('currentSpeed',speed);$('currentSpeed').style.color=windColor(speed);setText('currentDir',`${Math.round(cur.wind_direction_10m)}° ${degToCardinal(cur.wind_direction_10m)} · viene de / flecha va hacia ${(cur.wind_direction_10m+180)%360|0}°`);setText('currentGust',Math.round(cur.wind_gusts_10m)+' km/h');setText('currentTemp',Math.round(cur.temperature_2m)+'°');setText('currentHum',cur.relative_humidity_2m+'%');}
+function renderForecast(hourly){const grid=$('forecastGrid');grid.innerHTML='';let start=0,now=new Date();for(let i=0;i<hourly.time.length;i++){if(new Date(hourly.time[i])>=now){start=i;break;}}for(let i=start;i<Math.min(start+8,hourly.time.length);i++){let s=Math.round(hourly.wind_speed_10m[i]),g=Math.round(hourly.wind_gusts_10m[i]),d=hourly.wind_direction_10m[i];const div=document.createElement('div');div.className='fitem';div.innerHTML=`<div class="time">${i===start?'AHORA':hour(hourly.time[i])}</div><div class="arrow" style="color:${windColor(s)}">${arrowTo(d)}</div><div class="fspeed">${s}</div><div class="gust">raf ${g}</div>`;grid.appendChild(div);}}
+function renderSources(cur,met){const tb=$('sourceRows');tb.innerHTML='';function row(src,s,d,g,ok){const tr=document.createElement('tr');tr.innerHTML=`<td>${src}</td><td>${s?Math.round(s)+' km/h':'--'}</td><td>${d!=null?Math.round(d)+'° '+degToCardinal(d):'--'}</td><td>${g?Math.round(g)+' km/h':'--'}</td><td>${ok?'OK':'Sin dato'}</td>`;tb.appendChild(tr);}row('Open-Meteo',cur.wind_speed_10m,cur.wind_direction_10m,cur.wind_gusts_10m,true);row('MET Norway',met?.speed,met?.dir,met?.gust,!!met);}
+function initMap(lat,lon){if(!map){map=L.map('map',{zoomControl:true}).setView([lat,lon],13);tileLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri',maxZoom:19}).addTo(map);}else{map.setView([lat,lon],lastSource==='GPS'?14:12);}if(gpsMarker)map.removeLayer(gpsMarker);gpsMarker=L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:2,fillColor:'#ef4444',fillOpacity:.9}).addTo(map).bindPopup(lastSource==='GPS'?'Mi posición GPS':currentCity||'Ubicación');}
+async function addWindMarkers(lat,lon,cur){if(windLayer)map.removeLayer(windLayer);windLayer=L.layerGroup().addTo(map);const offsets=[[0,0],[.03,0],[-.03,0],[0,.03],[0,-.03],[.02,.02],[-.02,-.02],[.02,-.02],[-.02,.02]];for(const[oLat,oLon]of offsets){const pLat=lat+oLat,pLon=lon+oLon;let speed=cur.wind_speed_10m,dir=cur.wind_direction_10m,gust=cur.wind_gusts_10m;try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pLat}&longitude=${pLon}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=auto`,{cache:'no-store'});const d=await r.json();if(d.current){speed=d.current.wind_speed_10m;dir=d.current.wind_direction_10m;gust=d.current.wind_gusts_10m;}}catch{}const color=windColor(speed);const angle=(dir+180)%360;const icon=L.divIcon({className:'wind-marker',html:`<div style="transform:rotate(${angle}deg);color:${color};font-size:28px;text-shadow:0 0 10px ${color};">➤</div>`,iconSize:[32,32],iconAnchor:[16,16]});L.marker([pLat,pLon],{icon}).addTo(windLayer).bindPopup(`<b>${Math.round(speed)} km/h</b><br>Viene de ${Math.round(dir)}° ${degToCardinal(dir)}<br>Va hacia ${Math.round(angle)}°<br>Ráfaga ${Math.round(gust)} km/h`);}}
+function updateWindy(lat,lon){const z=9;const url=`https://embed.windy.com/embed2.html?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}&detailLat=${lat.toFixed(3)}&detailLon=${lon.toFixed(3)}&width=650&height=450&zoom=${z}&level=surface&overlay=wind&product=ecmwf&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;const f=$('windyFrame');if(f)f.src=url;}
+function bind(){renderFavorites();$('searchBtn').addEventListener('click',searchCity);$('gpsBtn').addEventListener('click',getGPS);$('saveBtn').addEventListener('click',saveFavorite);$('cityInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchCity();});$('satBtn').addEventListener('click',()=>status('Mapa satelital activo','ok'));window.addEventListener('resize',()=>{if(map)setTimeout(()=>map.invalidateSize(),100);});}
+window.addEventListener('DOMContentLoaded',()=>{try{bind();}catch(e){status('Error inicial: '+e.message,'error');}});
+window.addEventListener('error',e=>status('Error JS: '+e.message,'error'));
 </script>
 </body>
 </html>
