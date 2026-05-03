@@ -356,9 +356,7 @@
                 <div class="card-header">
                     <span>📊 Pronóstico 8 horas</span>
                     <div class="sources">
-                        <span class="source-badge active">ECMWF</span>
-                        <span class="source-badge">GFS</span>
-                        <span class="source-badge">ICON</span>
+                        <span class="source-badge active">Open-Meteo Best Match</span>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -553,11 +551,29 @@
         
         // Fetch datos
         async function fetchWeather(lat, lon) {
-            showStatus('Consultando modelos meteorológicos...', 'loading');
+            showStatus('Consultando proveedor meteorológico...', 'loading');
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m&forecast_days=2&timezone=auto&models=ecmwf_ifs04,gfs_global,icon_global`;
-                const res = await fetch(url);
+                // IMPORTANTE: sin &models=... para que Open-Meteo use “best match”.
+                // Con varios modelos, la respuesta puede cambiar nombres de campos y romper renderCurrent/renderForecast.
+                const params = new URLSearchParams({
+                    latitude: lat,
+                    longitude: lon,
+                    current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m',
+                    hourly: 'wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m',
+                    forecast_hours: 12,
+                    timezone: 'auto',
+                    wind_speed_unit: 'kmh'
+                });
+                const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+                const res = await fetch(url, { cache: 'no-store' });
                 const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    throw new Error(data.reason || `HTTP ${res.status}`);
+                }
+                if (!data.current || !data.hourly) {
+                    throw new Error('Respuesta incompleta del proveedor meteorológico');
+                }
                 
                 initMap(lat, lon);
                 addWindMarkers(lat, lon);
@@ -569,7 +585,7 @@
                 showStatus('');
                 document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleString('es-AR');
             } catch (e) {
-                showStatus('Error al obtener datos meteorológicos', 'error');
+                showStatus('Error al obtener datos meteorológicos: ' + e.message, 'error');
                 console.error(e);
             }
         }
