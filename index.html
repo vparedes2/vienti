@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Viento Local v9.0</title>
+  <title>Viento Local v10.0</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -36,7 +36,7 @@
   <header>
     <h1>🌬️ Viento Local</h1>
     <p>Multi‑fuente · próximas 8 horas · GPS + mapa satelital</p>
-    <div class="version">v9.0</div>
+    <div class="version">v10.0</div>
   </header>
 
   <div class="controls">
@@ -112,13 +112,14 @@
 </div>
 
 <script>
-const VERSION='v9.0';
-let map=null, windLayer=null, currentLat=null, currentLon=null, currentCity='';
+const VERSION='v10.0';
+let map=null, windLayer=null, gpsMarker=null, accuracyCircle=null, currentLat=null, currentLon=null, currentCity='', currentAccuracy=null, locationMode='';
 let forecastData=[];
-let favorites=JSON.parse(localStorage.getItem('windFavoritesV9')||localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
+let favorites=JSON.parse(localStorage.getItem('windFavoritesV10')||localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
 const $=id=>document.getElementById(id);
 
 function showStatus(msg,type=''){const el=$('status');el.textContent=msg;el.className='status '+type;}
+function showLocationInfo(){const el=$('locationInfo'); if(currentLat==null||currentLon==null){el.textContent='';return;} const acc=currentAccuracy?` · precisión aprox. ±${Math.round(currentAccuracy)} m`:''; const modo=locationMode==='gps'?'📍 GPS real del dispositivo':'🔎 Ciudad buscada'; el.textContent=`${modo}: ${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}${acc}`;}
 function kphFromMs(v){return v==null?null:v*3.6}
 function round(v){return v==null||Number.isNaN(v)?null:Math.round(v)}
 function degNorm(d){return ((d%360)+360)%360}
@@ -128,18 +129,18 @@ function arrowTo(whereDeg){const arrows=['↑','↗','→','↘','↓','↙','�
 function windColor(speed){if(speed<10)return'#10b981';if(speed<20)return'#38bdf8';if(speed<30)return'#f59e0b';if(speed<40)return'#f97316';return'#ef4444'}
 function formatHour(iso){return new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
 
-function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV9',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
+function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV10',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
 renderFavorites();
 
-$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV9',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
+$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV10',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
 $('gpsBtn').addEventListener('click',getGPS);
 $('searchBtn').addEventListener('click',searchCity);
 $('cityInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchCity();});
 window.addEventListener('resize',()=>{if(forecastData.length)drawChart();});
 
-function getGPS(){if(!navigator.geolocation){showStatus('Tu navegador no soporta geolocalización','error');return;}showStatus('Solicitando permiso GPS...','loading');navigator.geolocation.getCurrentPosition(pos=>{currentLat=pos.coords.latitude;currentLon=pos.coords.longitude;currentCity='GPS';$('cityInput').value=`${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;fetchAll(currentLat,currentLon);},err=>{let msg='Error GPS';if(err.code===1)msg='Permiso de ubicación denegado. Revisá permisos del sitio.';if(err.code===2)msg='Ubicación no disponible. Activá GPS/datos.';if(err.code===3)msg='Tiempo de espera GPS agotado.';showStatus(msg,'error');},{enableHighAccuracy:true,timeout:20000,maximumAge:0});}
+function getGPS(){if(!navigator.geolocation){showStatus('Tu navegador no soporta geolocalización','error');return;}showStatus('Solicitando permiso GPS...','loading');navigator.geolocation.getCurrentPosition(pos=>{currentLat=pos.coords.latitude;currentLon=pos.coords.longitude;currentAccuracy=pos.coords.accuracy||null;locationMode='gps';currentCity='Mi posición GPS';$('cityInput').value=`GPS ${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;showLocationInfo();fetchAll(currentLat,currentLon);},err=>{let msg='Error GPS';if(err.code===1)msg='Permiso de ubicación denegado. Revisá permisos del sitio.';if(err.code===2)msg='Ubicación no disponible. Activá GPS/datos.';if(err.code===3)msg='Tiempo de espera GPS agotado.';showStatus(msg,'error');},{enableHighAccuracy:true,timeout:25000,maximumAge:0});}
 
-async function searchCity(){const q=$('cityInput').value.trim();if(!q)return;showStatus('Buscando ubicación...','loading');try{let url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=es&format=json`;let res=await fetch(url);let data=await res.json();if(!res.ok||!data.results?.length)throw new Error('Ciudad no encontrada');let r=data.results.find(x=>x.country_code==='AR')||data.results[0];currentLat=r.latitude;currentLon=r.longitude;currentCity=[r.name,r.admin1,r.country].filter(Boolean).join(', ');$('cityInput').value=currentCity;fetchAll(currentLat,currentLon);}catch(e){showStatus('No se pudo encontrar la ciudad: '+e.message,'error');}}
+async function searchCity(){const q=$('cityInput').value.trim();if(!q)return;showStatus('Buscando ubicación...','loading');try{let url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=es&format=json`;let res=await fetch(url);let data=await res.json();if(!res.ok||!data.results?.length)throw new Error('Ciudad no encontrada');let r=data.results.find(x=>x.country_code==='AR')||data.results[0];currentLat=r.latitude;currentLon=r.longitude;currentAccuracy=null;locationMode='search';currentCity=[r.name,r.admin1,r.country].filter(Boolean).join(', ');$('cityInput').value=currentCity;showLocationInfo();fetchAll(currentLat,currentLon);}catch(e){showStatus('No se pudo encontrar la ciudad: '+e.message,'error');}}
 
 function initMap(lat,lon){if(!map){map=L.map('map',{zoomControl:true}).setView([lat,lon],10);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:19}).addTo(map);}else map.setView([lat,lon],10);setTimeout(()=>map.invalidateSize(),200);}
 
