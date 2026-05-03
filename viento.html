@@ -336,12 +336,12 @@
         <div class="controls">
             <div class="location-bar">
                 <input type="text" id="cityInput" placeholder="Buscar ciudad..." />
-                <button class="btn btn-secondary" onclick="searchCity()">🔍</button>
-                <button class="btn" onclick="getGPS()">📍 GPS</button>
+                <button type="button" id="searchBtn" class="btn btn-secondary" onclick="searchCity()">🔍</button>
+                <button type="button" id="gpsBtn" class="btn" onclick="getGPS()">📍 GPS</button>
             </div>
             <div class="location-actions">
-                <button class="btn btn-success btn-sm btn-full" onclick="addFavorite()">⭐ Guardar posición</button>
-                <button class="btn btn-secondary btn-sm btn-full" onclick="toggleMapLayer()">🛰️ Satélite</button>
+                <button type="button" id="saveBtn" class="btn btn-success btn-sm btn-full" onclick="addFavorite()">⭐ Guardar posición</button>
+                <button type="button" id="satBtn" class="btn btn-secondary btn-sm btn-full" onclick="toggleMapLayer()">🛰️ Satélite</button>
             </div>
             <div class="favorites" id="favoritesList">
                 <span style="font-size:0.75rem;color:#64748b;">Favoritos:</span>
@@ -510,31 +510,29 @@
                 showStatus('Tu navegador no soporta geolocalización', 'error');
                 return;
             }
+
             showStatus('Obteniendo ubicación GPS...', 'loading');
+
+            const success = (pos) => {
+                currentLat = pos.coords.latitude;
+                currentLon = pos.coords.longitude;
+                currentCity = 'Mi ubicación';
+                document.getElementById('cityInput').value = `${currentLat.toFixed(3)}, ${currentLon.toFixed(3)}`;
+                fetchWeather(currentLat, currentLon);
+            };
+
+            const failLowAccuracy = (err) => {
+                let msg = 'Error al obtener GPS';
+                if (err.code === 1) msg = 'Permiso de ubicación denegado. Activá ubicación del navegador o buscá ciudad.';
+                if (err.code === 2) msg = 'No se pudo determinar la ubicación. Probá nuevamente o buscá ciudad.';
+                if (err.code === 3) msg = 'El GPS tardó demasiado. Probá nuevamente o buscá ciudad.';
+                showStatus(msg, 'error');
+                console.error('GPS error:', err);
+            };
+
+            // Primer intento: rápido y compatible con teléfonos.
             navigator.geolocation.getCurrentPosition(
-                pos => {
-                    currentLat = pos.coords.latitude;
-                    currentLon = pos.coords.longitude;
-                    document.getElementById('cityInput').value = `${currentLat.toFixed(3)}, ${currentLon.toFixed(3)}`;
-                    fetchWeather(currentLat, currentLon);
-                },
-                err => {
-                    let msg = 'Error al obtener GPS';
-                    if (err.code === 1) msg = 'Permiso de ubicación denegado. Usá la búsqueda manual.';
-                    showStatus(msg, 'error');
-                },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-            );
-        }
-        
-        // Búsqueda por ciudad
-        async function searchCity() {
-            const q = document.getElementById('cityInput').value.trim();
-            if (!q) return;
-            showStatus('Buscando ubicación...', 'loading');
-            try {
-                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=es&format=json`);
-                const data = await res.json();
-                if (!data.results || data.results.length === 0) {
-                    showStatus('Ciudad no encontrada', 'error');
-                    return
+                success,
+                () => {
+                    // Segundo intento: alta precisión, por si el primero no responde.
+                    navigator.geolocation.getCurrentPosition(succe
