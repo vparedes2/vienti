@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Viento Local v7.0</title>
+  <title>Viento Local v8.0</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -36,7 +36,7 @@
   <header>
     <h1>🌬️ Viento Local</h1>
     <p>Multi‑fuente · próximas 8 horas · GPS + mapa satelital</p>
-    <div class="version">v7.0</div>
+    <div class="version">v8.0</div>
   </header>
 
   <div class="controls">
@@ -48,10 +48,6 @@
     <div class="save-row">
       <input type="text" id="favName" placeholder="Nombre para guardar posición. Ej: R1 Troncal, BAN Piletas..." />
       <button class="btn btn-success" id="saveBtn">⭐ Guardar</button>
-    </div>
-    <div class="config-row" style="padding:8px 0 0;">
-      <input type="password" id="owmKey" placeholder="API Key OpenWeather opcional para respaldo" />
-      <button class="btn btn-warning btn-small" id="saveKeyBtn">Guardar key</button>
     </div>
     <div class="favorites" id="favoritesList"><span style="font-size:.75rem;color:#64748b;">Favoritos:</span></div>
   </div>
@@ -103,7 +99,7 @@
           <tbody id="sourcesBody"></tbody>
         </table>
       </div>
-      <div class="note">OpenWeather queda como respaldo opcional: pegá tu API key y se guarda en este teléfono/navegador.</div>
+      <div class="note">Sistema multi‑fuente sin claves: Open‑Meteo como fuente principal y MET Norway como respaldo/comparación.</div>
     </div>
 
     <div class="card">
@@ -116,12 +112,11 @@
 </div>
 
 <script>
-const VERSION='v7.0';
+const VERSION='v8.0';
 let map=null, windLayer=null, currentLat=null, currentLon=null, currentCity='';
 let forecastData=[];
-let favorites=JSON.parse(localStorage.getItem('windFavoritesV7')||'[]');
+let favorites=JSON.parse(localStorage.getItem('windFavoritesV8')||localStorage.getItem('windFavoritesV7')||'[]');
 const $=id=>document.getElementById(id);
-$('owmKey').value=localStorage.getItem('openWeatherKey')||'';
 
 function showStatus(msg,type=''){const el=$('status');el.textContent=msg;el.className='status '+type;}
 function kphFromMs(v){return v==null?null:v*3.6}
@@ -133,11 +128,11 @@ function arrowTo(whereDeg){const arrows=['↑','↗','→','↘','↓','↙','�
 function windColor(speed){if(speed<10)return'#10b981';if(speed<20)return'#38bdf8';if(speed<30)return'#f59e0b';if(speed<40)return'#f97316';return'#ef4444'}
 function formatHour(iso){return new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
 
-function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV7',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
+function renderFavorites(){const list=$('favoritesList');list.innerHTML='<span style="font-size:.75rem;color:#64748b;">Favoritos:</span>';favorites.forEach((fav,idx)=>{const chip=document.createElement('span');chip.className='fav-chip';chip.innerHTML=`${fav.name} <span class="remove">×</span>`;chip.onclick=e=>{if(e.target.className==='remove'){favorites.splice(idx,1);localStorage.setItem('windFavoritesV8',JSON.stringify(favorites));renderFavorites();}else{currentLat=fav.lat;currentLon=fav.lon;currentCity=fav.name;$('cityInput').value=fav.name;fetchAll(fav.lat,fav.lon);}};list.appendChild(chip);});}
 renderFavorites();
 
-$('saveKeyBtn').addEventListener('click',()=>{localStorage.setItem('openWeatherKey',$('owmKey').value.trim());showStatus('API key guardada en este navegador','ok');});
-$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV7',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
+showStatus('API key guardada en este navegador','ok');});
+$('saveBtn').addEventListener('click',()=>{if(currentLat==null||currentLon==null){showStatus('Primero cargá una ubicación','error');return;}const name=($('favName').value.trim()||currentCity||`${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`);favorites= favorites.filter(f=>f.name!==name);favorites.push({name,lat:currentLat,lon:currentLon});localStorage.setItem('windFavoritesV8',JSON.stringify(favorites));$('favName').value='';renderFavorites();showStatus('Posición guardada: '+name,'ok');});
 $('gpsBtn').addEventListener('click',getGPS);
 $('searchBtn').addEventListener('click',searchCity);
 $('cityInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchCity();});
@@ -155,9 +150,8 @@ async function addWindMarkers(lat,lon){if(windLayer)map.removeLayer(windLayer);w
 
 async function fetchOpenMeteo(lat,lon,withHourly=true){const hourly=withHourly?'&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m':'';const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m${hourly}&forecast_days=2&timezone=auto`;const res=await fetch(url);const data=await res.json();if(!res.ok||data.error)throw new Error(data.reason||'Open‑Meteo error');return{source:'Open‑Meteo',current:{speed:data.current?.wind_speed_10m,gust:data.current?.wind_gusts_10m,dir:data.current?.wind_direction_10m,temp:data.current?.temperature_2m,hum:data.current?.relative_humidity_2m},hourly:data.hourly};}
 async function fetchMET(lat,lon){const url=`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;const res=await fetch(url);const data=await res.json();if(!res.ok)throw new Error('MET Norway HTTP '+res.status);const ts=data.properties?.timeseries||[];const now=ts[0]?.data?.instant?.details;if(!now)throw new Error('MET sin datos');const next=ts.map(x=>({time:x.time,d:x.data?.instant?.details})).filter(x=>x.d).slice(0,12);return{source:'MET Norway',current:{speed:kphFromMs(now.wind_speed),gust:kphFromMs(now.wind_speed_of_gust),dir:now.wind_from_direction,temp:now.air_temperature,hum:now.relative_humidity},hourly:next.map(x=>({time:x.time,speed:kphFromMs(x.d.wind_speed),gust:kphFromMs(x.d.wind_speed_of_gust),dir:x.d.wind_from_direction,temp:x.d.air_temperature}))};}
-async function fetchOpenWeather(lat,lon){const key=localStorage.getItem('openWeatherKey')||'';if(!key)return null;const url=`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${encodeURIComponent(key)}&units=metric&lang=es`;const res=await fetch(url);const data=await res.json();if(!res.ok)throw new Error(data.message||'OpenWeather HTTP '+res.status);return{source:'OpenWeather',current:{speed:kphFromMs(data.wind?.speed),gust:kphFromMs(data.wind?.gust),dir:data.wind?.deg,temp:data.main?.temp,hum:data.main?.humidity},hourly:null};}
 
-async function fetchAll(lat,lon){showStatus('Consultando fuentes meteorológicas...','loading');$('mainContent').classList.add('hidden');initMap(lat,lon);updateWindy(lat,lon);const results=[];const tasks=[fetchOpenMeteo(lat,lon,true),fetchMET(lat,lon),fetchOpenWeather(lat,lon)];const settled=await Promise.allSettled(tasks);settled.forEach((r,i)=>{const name=['Open‑Meteo','MET Norway','OpenWeather'][i];if(r.status==='fulfilled'&&r.value)results.push({...r.value,ok:true});else results.push({source:name,ok:false,error:r.reason?.message||'No configurado / sin respuesta'});});const valid=results.filter(r=>r.ok&&r.current?.speed!=null&&r.current?.dir!=null);if(!valid.length){renderSources(results);showStatus('No se pudo obtener viento de ninguna fuente','error');return;}const consolidated=consolidate(valid);renderCurrent(consolidated,valid);renderForecast(results);renderSources(results);addWindMarkers(lat,lon);$('mainContent').classList.remove('hidden');showStatus('Datos cargados correctamente · '+VERSION,'ok');$('lastUpdate').textContent='Actualizado: '+new Date().toLocaleString('es-AR')+' · '+VERSION;}
+async function fetchAll(lat,lon){showStatus('Consultando fuentes meteorológicas...','loading');$('mainContent').classList.add('hidden');initMap(lat,lon);updateWindy(lat,lon);const results=[];const tasks=[fetchOpenMeteo(lat,lon,true),fetchMET(lat,lon)];const settled=await Promise.allSettled(tasks);settled.forEach((r,i)=>{const name=['Open‑Meteo','MET Norway'][i];if(r.status==='fulfilled'&&r.value)results.push({...r.value,ok:true});else results.push({source:name,ok:false,error:r.reason?.message||'No configurado / sin respuesta'});});const valid=results.filter(r=>r.ok&&r.current?.speed!=null&&r.current?.dir!=null);if(!valid.length){renderSources(results);showStatus('No se pudo obtener viento de ninguna fuente','error');return;}const consolidated=consolidate(valid);renderCurrent(consolidated,valid);renderForecast(results);renderSources(results);addWindMarkers(lat,lon);$('mainContent').classList.remove('hidden');setTimeout(()=>{if(map){map.invalidateSize();map.setView([lat,lon],10);}},100);setTimeout(()=>{if(map)map.invalidateSize();},600);showStatus('Datos cargados correctamente · '+VERSION,'ok');$('lastUpdate').textContent='Actualizado: '+new Date().toLocaleString('es-AR')+' · '+VERSION;}
 function consolidate(valid){const speeds=valid.map(v=>v.current.speed).filter(v=>v!=null);const gusts=valid.map(v=>v.current.gust).filter(v=>v!=null);const temps=valid.map(v=>v.current.temp).filter(v=>v!=null);const hums=valid.map(v=>v.current.hum).filter(v=>v!=null);let x=0,y=0;valid.forEach(v=>{const rad=degNorm(v.current.dir)*Math.PI/180;x+=Math.sin(rad);y+=Math.cos(rad);});const dir=degNorm(Math.atan2(x/valid.length,y/valid.length)*180/Math.PI);return{source:valid.map(v=>v.source).join(' + '),speed:speeds.reduce((a,b)=>a+b,0)/speeds.length,gust:gusts.length?Math.max(...gusts):null,dir,temp:temps.length?temps.reduce((a,b)=>a+b,0)/temps.length:null,hum:hums.length?hums.reduce((a,b)=>a+b,0)/hums.length:null};}
 function renderCurrent(cur,valid){const speed=round(cur.speed), gust=round(cur.gust), dir=cur.dir, to=windToDeg(dir);$('sourceUsed').textContent=valid.length>1?'Promedio multi‑fuente':valid[0].source;$('currentSpeed').textContent=speed;$('currentSpeed').style.color=windColor(speed);$('currentDir').textContent=`Viene de ${degToCardinal(dir)} ${round(dir)}°`;$('goesTo').textContent=degToCardinal(to);$('currentGust').textContent=gust==null?'--':gust+' km/h';$('currentTemp').textContent=cur.temp==null?'--':round(cur.temp)+'°';$('compassArrow').style.transform=`rotate(${dir}deg)`;const a=$('alertBox');if(gust>50){a.className='alert-box danger show';a.textContent=`🚨 RÁFAGAS CRÍTICAS: ${gust} km/h. Evaluar suspensión de izajes, trabajos en altura y tareas expuestas.`;}else if(gust>40){a.className='alert-box show';a.textContent=`⚠️ Ráfagas de ${gust} km/h. Precaución en operaciones expuestas.`;}else{a.className='alert-box';a.textContent='';}}
 function renderForecast(results){const om=results.find(r=>r.source==='Open‑Meteo'&&r.ok&&r.hourly);const met=results.find(r=>r.source==='MET Norway'&&r.ok&&r.hourly);forecastData=[];const grid=$('forecastGrid');grid.innerHTML='';if(!om)return;const now=new Date();let start=0;for(let i=0;i<om.hourly.time.length;i++){if(new Date(om.hourly.time[i])>=now){start=i;break;}}for(let n=0;n<8;n++){const i=start+n;let speed=om.hourly.wind_speed_10m[i], gust=om.hourly.wind_gusts_10m[i], dir=om.hourly.wind_direction_10m[i], temp=om.hourly.temperature_2m[i];let src='OM';if(met?.hourly?.[n]){const m=met.hourly[n];speed=(speed+(m.speed??speed))/2;gust=Math.max(gust,m.gust??gust);dir=averageDeg([dir,m.dir]);temp=(temp+(m.temp??temp))/2;src='OM+MET';}const timeStr=n===0?'AHORA':formatHour(om.hourly.time[i]);const to=windToDeg(dir);const item={time:timeStr,speed:round(speed),gust:round(gust),dir,to,temp:round(temp),src};forecastData.push(item);const el=document.createElement('div');el.className='forecast-item'+(n===0?' highlight':'');el.innerHTML=`<div class="time">${timeStr}</div><div class="dir-icon" style="color:${windColor(item.speed)};transform:rotate(${to}deg)">➤</div><div class="speed">${item.speed}</div><div class="gust">raf ${item.gust}</div><div class="src">${src}</div>`;grid.appendChild(el);}drawChart();}
