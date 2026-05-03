@@ -1,1 +1,540 @@
-<!DOCTYPE html>\n<html>\n<head>\n<meta http-equiv=\"refresh\" content=\"0; url=viento.html\">\n</head>\n<body>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <title>Viento Local - Pronóstico 8hs</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .container { max-width: 100%; margin: 0 auto; }
+        header {
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 { font-size: 1.3rem; color: #38bdf8; }
+        header p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+        
+        .controls {
+            padding: 12px 16px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+        .location-bar {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .location-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .location-bar input {
+            min-width: 0;
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .btn {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-secondary { background: #334155; }
+        .btn-success { background: #10b981; }
+        .btn-sm { padding: 8px 10px; font-size: 0.78rem; }
+        .btn-full { width: 100%; }
+        @media (max-width: 420px) {
+            .controls { padding: 10px 12px; }
+            .btn { padding: 10px 11px; }
+            .location-bar { grid-template-columns: 1fr 44px 72px; }
+        }
+        
+        .favorites {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .fav-chip {
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .fav-chip:hover { border-color: #0ea5e9; color: #0ea5e9; }
+        .fav-chip .remove { color: #ef4444; font-weight: bold; }
+        
+        .status {
+            text-align: center;
+            padding: 16px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        .status.error { color: #f87171; }
+        .status.loading { color: #38bdf8; }
+        
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            margin: 12px 16px;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #334155;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #map {
+            height: 280px;
+            width: 100%;
+            background: #0f172a;
+        }
+        .wind-popup {
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        .wind-popup .speed { font-size: 1.3rem; font-weight: 700; color: #38bdf8; }
+        .wind-popup .dir { color: #94a3b8; }
+        
+        .current-wind {
+            text-align: center;
+            padding: 24px 16px;
+        }
+        .wind-speed {
+            font-size: 5rem;
+            font-weight: 800;
+            color: #38bdf8;
+            line-height: 1;
+            text-shadow: 0 0 30px rgba(56,189,248,0.3);
+        }
+        .wind-unit { font-size: 1.3rem; color: #64748b; }
+        .wind-dir {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1.1rem;
+        }
+        .compass {
+            width: 48px; height: 48px;
+            border: 3px solid #475569;
+            border-radius: 50%;
+            position: relative;
+            background: #0f172a;
+        }
+        .compass-arrow {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 20px solid #f59e0b;
+            transform-origin: 50% 100%;
+            margin-left: -6px;
+            margin-top: -20px;
+        }
+        .compass-labels {
+            position: absolute;
+            width: 100%; height: 100%;
+        }
+        .compass-labels span {
+            position: absolute;
+            font-size: 0.6rem;
+            color: #64748b;
+            font-weight: bold;
+        }
+        .compass-labels .n { top: 2px; left: 50%; transform: translateX(-50%); }
+        .compass-labels .e { right: 2px; top: 50%; transform: translateY(-50%); }
+        .compass-labels .s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+        .compass-labels .w { left: 2px; top: 50%; transform: translateY(-50%); }
+        
+        .wind-detail {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 0 16px 16px;
+        }
+        .detail-box {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+        .detail-box .label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-box .value { font-size: 1.2rem; font-weight: 700; color: #e2e8f0; margin-top: 4px; }
+        
+        .forecast-grid {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 0 16px 16px;
+            scrollbar-width: none;
+        }
+        .forecast-grid::-webkit-scrollbar { display: none; }
+        .forecast-item {
+            min-width: 70px;
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .forecast-item.highlight {
+            border-color: #0ea5e9;
+            background: rgba(14, 165, 233, 0.1);
+        }
+        .forecast-item .time { font-size: 0.7rem; color: #64748b; margin-bottom: 8px; }
+        .forecast-item .dir-icon { font-size: 1.4rem; margin: 4px 0; }
+        .forecast-item .speed { font-size: 1.2rem; font-weight: 700; color: #e2e8f0; }
+        .forecast-item .gust { font-size: 0.7rem; color: #f87171; margin-top: 2px; }
+        .forecast-item .temp { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+        
+        .chart-container {
+            height: 160px;
+            padding: 0 16px 16px;
+        }
+        canvas { width: 100%; height: 100%; }
+        
+        .alert-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: #fbbf24;
+            margin: 0 16px 16px;
+            display: none;
+        }
+        .alert-box.show { display: block; }
+        .alert-box.danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        .sources {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 12px;
+            flex-wrap: wrap;
+        }
+        .source-badge {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: #0f172a;
+            color: #64748b;
+        }
+        .source-badge.active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        
+        .last-update {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #475569;
+            padding: 16px;
+        }
+        
+        .map-card { position: relative; }
+        .map-compass {
+            position: absolute;
+            top: 55px;
+            right: 12px;
+            width: 78px;
+            height: 78px;
+            border-radius: 50%;
+            border: 2px solid rgba(226,232,240,.65);
+            background: rgba(15, 23, 42, 0.72);
+            z-index: 1000;
+            color: #e2e8f0;
+            font-size: .7rem;
+            font-weight: 700;
+            pointer-events: none;
+            box-shadow: 0 0 18px rgba(0,0,0,.45);
+        }
+        .map-compass span { position: absolute; }
+        .map-compass .n { top: 4px; left: 50%; transform: translateX(-50%); color:#38bdf8; }
+        .map-compass .e { right: 6px; top: 50%; transform: translateY(-50%); }
+        .map-compass .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+        .map-compass .w { left: 6px; top: 50%; transform: translateY(-50%); }
+        .map-compass::before {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            width: 2px; height: 54px;
+            background: rgba(226,232,240,.35);
+            transform: translate(-50%, -50%);
+        }
+        .map-compass::after {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            width: 54px; height: 2px;
+            background: rgba(226,232,240,.35);
+            transform: translate(-50%, -50%);
+        }
+        
+        .hidden { display: none !important; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse { animation: pulse 1.5s infinite; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌬️ Viento Local</h1>
+            <p>Pronóstico horario · Próximas 8 horas · GPS + Mapa</p>
+        </header>
+        
+        <div class="controls">
+            <div class="location-bar">
+                <input type="text" id="cityInput" placeholder="Buscar ciudad..." />
+                <button type="button" id="searchBtn" class="btn btn-secondary" >🔍</button>
+                <button type="button" id="gpsBtn" class="btn" >📍 GPS</button>
+            </div>
+            <div class="location-actions">
+                <button type="button" id="saveBtn" class="btn btn-success btn-sm btn-full" >⭐ Guardar posición</button>
+                <button type="button" id="satBtn" class="btn btn-secondary btn-sm btn-full" >🛰️ Satélite</button>
+            </div>
+            <div class="favorites" id="favoritesList">
+                <span style="font-size:0.75rem;color:#64748b;">Favoritos:</span>
+            </div>
+        </div>
+        
+        <div id="status" class="status">Tocá 📍 para usar tu ubicación o buscá una ciudad</div>
+        
+        <div id="mainContent" class="hidden">
+            <!-- MAPA -->
+            <div class="card map-card">
+                <div class="card-header">
+                    <span>🗺️ Mapa de viento</span>
+                    <span style="font-size:0.7rem;color:#64748b;">km/h</span>
+                </div>
+                <div id="map"></div>
+                <div class="map-compass"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">O</span></div>
+            </div>
+            
+            <!-- VIENTO ACTUAL -->
+            <div class="card" id="currentCard">
+                <div class="current-wind">
+                    <div class="wind-speed" id="currentSpeed">--</div>
+                    <div class="wind-unit">km/h</div>
+                    <div class="wind-dir">
+                        <div class="compass">
+                            <div class="compass-labels">
+                                <span class="n">N</span>
+                                <span class="e">E</span>
+                                <span class="s">S</span>
+                                <span class="w">O</span>
+                            </div>
+                            <div class="compass-arrow" id="compassArrow"></div>
+                        </div>
+                        <span id="currentDir">--° --</span>
+                    </div>
+                </div>
+                <div class="wind-detail">
+                    <div class="detail-box">
+                        <div class="label">Ráfagas</div>
+                        <div class="value" id="currentGust">--</div>
+                    </div>
+                    <div class="detail-box">
+                        <div class="label">Temperatura</div>
+                        <div class="value" id="currentTemp">--°</div>
+                    </div>
+                    <div class="detail-box">
+                        <div class="label">Humedad</div>
+                        <div class="value" id="currentHum">--%</div>
+                    </div>
+                </div>
+                <div class="alert-box" id="alertBox"></div>
+            </div>
+            
+            <!-- PRONÓSTICO -->
+            <div class="card" id="forecastCard">
+                <div class="card-header">
+                    <span>📊 Pronóstico 8 horas</span>
+                    <div class="sources">
+                        <span class="source-badge active">ECMWF</span>
+                        <span class="source-badge">GFS</span>
+                        <span class="source-badge">ICON</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="windChart"></canvas>
+                </div>
+                <div class="forecast-grid" id="forecastGrid"></div>
+            </div>
+        </div>
+        
+        <div class="last-update" id="lastUpdate"></div>
+    </div>
+
+    <script>
+        let map = null;
+        let windLayer = null;
+        let baseLayer = null;
+        let satelliteMode = true;
+        let currentLat = null;
+        let currentLon = null;
+        let currentCity = '';
+        let forecastData = [];
+        let favorites = JSON.parse(localStorage.getItem('windFavorites') || '[]');
+        
+        // Inicializar favoritos
+        function renderFavorites() {
+            const list = document.getElementById('favoritesList');
+            list.innerHTML = '<span style="font-size:0.75rem;color:#64748b;">Favoritos:</span>';
+            favorites.forEach((fav, idx) => {
+                const chip = document.createElement('span');
+                chip.className = 'fav-chip';
+                chip.innerHTML = `${fav.name} <span class="remove" onclick="removeFavorite(${idx}, event)">×</span>`;
+                chip.onclick = (e) => { if(e.target.className !== 'remove') loadFavorite(fav); };
+                list.appendChild(chip);
+            });
+        }
+        renderFavorites();
+        
+        function addFavorite() {
+            if (!currentLat || !currentLon) {
+                showStatus('Primero buscá una ciudad o activá el GPS', 'error');
+                return;
+            }
+            const suggested = currentCity || `${currentLat.toFixed(3)}, ${currentLon.toFixed(3)}`;
+            const name = prompt('Nombre para guardar esta posición:', suggested);
+            if (!name || !name.trim()) return;
+            const cleanName = name.trim();
+            const existing = favorites.findIndex(f => f.name.toLowerCase() === cleanName.toLowerCase());
+            const fav = { name: cleanName, lat: currentLat, lon: currentLon };
+            if (existing >= 0) favorites[existing] = fav;
+            else favorites.push(fav);
+            localStorage.setItem('windFavorites', JSON.stringify(favorites));
+            renderFavorites();
+            showStatus(`Posición guardada: ${cleanName}`, '');
+        }
+        
+        function removeFavorite(idx, e) {
+            e.stopPropagation();
+            favorites.splice(idx, 1);
+            localStorage.setItem('windFavorites', JSON.stringify(favorites));
+            renderFavorites();
+        }
+        
+        function loadFavorite(fav) {
+            currentLat = fav.lat;
+            currentLon = fav.lon;
+            currentCity = fav.name;
+            document.getElementById('cityInput').value = fav.name;
+            fetchWeather(fav.lat, fav.lon);
+        }
+        
+        // Utilidades
+        function degToCardinal(deg) {
+            const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+            return dirs[Math.round(deg / 22.5) % 16];
+        }
+        
+        function getArrowUnicode(deg) {
+            const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
+            return arrows[Math.round(deg / 45) % 8];
+        }
+        
+        function windColor(speed) {
+            if (speed < 10) return '#10b981';
+            if (speed < 20) return '#38bdf8';
+            if (speed < 30) return '#f59e0b';
+            if (speed < 40) return '#f97316';
+            return '#ef4444';
+        }
+        
+        function formatHour(iso) {
+            const d = new Date(iso);
+            return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function showStatus(msg, type = '') {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status ' + type;
+        }
+        
+        // GPS
+        function getGPS() {
+            if (!navigator.geolocation) {
+                showStatus('Tu navegador no soporta geolocalización', 'error');
+                return;
+            }
+
+            showStatus('Obteniendo ubicación GPS...', 'loading');
+
+            const success = (pos) => {
+                currentLat = pos.coords.latitude;
+                currentLon = pos.coords.longitude;
+                currentCity = 'Mi ubicación';
+                document.getElementById('cityInput').value = `${currentLat.toFixed(3)}, ${currentLon.toFixed(3)}`;
+                fetchWeather(currentLat, currentLon);
+            };
+
+            const failLowAccuracy = (err) => {
+                let msg = 'Error al obtener GPS';
+                if (err.code === 1) msg = 'Permiso de ubicación denegado. Activá ubicación del navegador o buscá ciudad.';
+                if (err.code === 2) msg = 'No se pudo determinar la ubicación. Probá nuevamente o buscá ciudad.';
+                if (err.code === 3) msg = 'El GPS tardó demasiado. Probá nuevamente o buscá ciudad.';
+                showStatus(msg, 'error');
+                console.error('GPS error:', err);
+            };
+
+            // Primer intento: rápido y compatible con teléfonos.
+            navigator.geolocation.getCurrentPosition(
+                success,
+                () => {
+                    // Segundo intento: alta precisión, por si el primero no responde.
+                    navigator.geolocation.getCurrentPosition(success, failLowAccuracy, {
+                        enableHighAccuracy: true,
+                
