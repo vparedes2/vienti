@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniMax-M3 | Gestión de préstamos personales</title>
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--line:#243044;--accent:#38bdf8;--good:#22c55e;--warn:#f59e0b;--bad:#ef4444;--soft:#1e293b;--white:#fff}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#0f172a,#111827 50%,#0b1220);color:var(--text)}
+    header{padding:24px 20px;border-bottom:1px solid var(--line);background:rgba(15,23,42,.85);position:sticky;top:0;backdrop-filter:blur(10px);z-index:10}
+    .wrap{max-width:1220px;margin:auto}.top{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap}.brand h1{margin:0;font-size:28px}.brand p{margin:6px 0 0;color:var(--muted)}
+    .badge{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--soft);padding:8px 12px;border-radius:999px;color:#cbd5e1;font-size:13px}
+    nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.tab{border:1px solid var(--line);background:#0b1220;color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer}.tab.active{background:var(--accent);color:#001018;border-color:var(--accent);font-weight:700}
+    main{padding:24px 20px 60px}.grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(160px,1fr))}.card{background:rgba(17,24,39,.92);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.22)}
+    .kpi .label{color:var(--muted);font-size:13px}.kpi .value{font-size:26px;font-weight:800;margin-top:6px}.kpi small{color:#94a3b8}.toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:18px 0}.search{display:flex;gap:10px;flex-wrap:wrap}input,select,button{font:inherit}input,select{background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}button.primary{background:var(--accent);color:#001018;border:0;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}button.ghost{background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;overflow:hidden}th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{color:#cbd5e1;background:#0b1220;position:sticky;top:118px}tr:hover{background:rgba(56,189,248,.06)}.status{padding:6px 9px;border-radius:999px;font-size:12px;font-weight:800;display:inline-block}.ok{background:rgba(34,197,94,.15);color:#86efac}.late{background:rgba(245,158,11,.16);color:#fcd34d}.danger{background:rgba(239,68,68,.16);color:#fca5a5}.pill{background:#0b1220;border:1px solid var(--line);padding:5px 8px;border-radius:999px;color:#cbd5e1;font-size:12px}.two{grid-template-columns:1.3fr .7fr}.client-card{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:14px;background:#0b1220;margin-bottom:10px}.client-card h3{margin:0 0 4px}.muted{color:var(--muted)}.money{font-weight:800}.section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.section-title h2{margin:0}.notice{border-left:4px solid var(--warn);background:rgba(245,158,11,.08);padding:14px;border-radius:12px;color:#fde68a}.legal{line-height:1.5;color:#cbd5e1}.legal strong{color:#fff}.form{display:grid;gap:10px}.form label{font-size:13px;color:#cbd5e1}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}.mini{font-size:12px;color:#94a3b8}.progress{height:9px;border-radius:999px;background:#172033;overflow:hidden}.bar{height:100%;background:var(--accent)}.loginbox{max-width:560px;margin:22px auto}.footer-note{margin-top:18px;color:#94a3b8;font-size:12px}
+    @media(max-width:850px){.kpis,.two{grid-template-columns:1fr}th{position:static}.tablewrap{overflow:auto}.brand h1{font-size:23px}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><h1>MiniMax-M3</h1><p>Demo de gestión de préstamos personales · Argentina · 46% TNA · hasta 12 cuotas</p></div>
+      <span class="badge">💼 Prestamista / 👤 Portal cliente</span>
+    </div>
+    <nav>
+      <button class="tab active" data-view="dashboard">Panel prestamista</button>
+      <button class="tab" data-view="clientes">Clientes y cuotas</button>
+      <button class="tab" data-view="cliente">Portal cliente</button>
+      <button class="tab" data-view="garantias">Garantías sugeridas</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <section id="dashboard" class="view">
+    <div class="grid kpis">
+      <div class="card kpi"><div class="label">Capital prestado</div><div id="kCapital" class="value"></div><small>20 clientes demo</small></div>
+      <div class="card kpi"><div class="label">Saldo pendiente</div><div id="kPendiente" class="value"></div><small>Capital + intereses base</small></div>
+      <div class="card kpi"><div class="label">Mora acumulada</div><div id="kMora" class="value"></div><small>Interés diario por atraso</small></div>
+      <div class="card kpi"><div class="label">Clientes en atraso</div><div id="kAtraso" class="value"></div><small>4 casos cargados</small></div>
+    </div>
+    <div class="grid two" style="margin-top:16px">
+      <div class="card"><div class="section-title"><h2>Resumen operativo</h2><span class="pill">TNA 46%</span></div><div id="resumenClientes"></div></div>
+      <div class="card"><h2>Alta rápida</h2><div class="form">
+        <label>Cliente</label><input id="newNombre" placeholder="Nombre y apellido">
+        <label>DNI</label><input id="newDni" placeholder="DNI">
+        <label>Monto</label><input id="newMonto" type="number" value="500000">
+        <label>Cuotas</label><select id="newCuotas"><option>3</option><option>6</option><option>9</option><option selected>12</option></select>
+        <label>Cuotas pagas</label><input id="newPagas" type="number" value="0" min="0" max="12">
+        <button class="primary" onclick="addClient()">Agregar préstamo demo</button>
+        <p class="mini">Los datos se guardan solo en este navegador mediante localStorage.</p>
+      </div></div>
+    </div>
+  </section>
+  <section id="clientes" class="view hidden">
+    <div class="toolbar"><h2>Clientes y estado de cuotas</h2><div class="search"><input id="q" placeholder="Buscar cliente o DNI" oninput="renderTable()"><select id="filter" onchange="renderTable()"><option value="all">Todos</option><option value="late">Con atraso</option><option value="ok">Al día</option></select><button class="ghost" onclick="resetDemo()">Restaurar demo</button></div></div>
+    <div class="card tablewrap"><table><thead><tr><th>Cliente</th><th>DNI</th><th>Monto</th><th>Cuotas</th><th>Pagas</th><th>Vencimiento</th><th>Atraso</th><th>Mora</th><th>Saldo</th><th>Estado</th></tr></thead><tbody id="tbody"></tbody></table></div>
+  </section>
+  <section id="cliente" class="view hidden">
+    <div class="card loginbox"><h2>Consulta del cliente</h2><p class="muted">Ingresar DNI demo. Ejemplos: 30111222, 28444555, 32777888, 33888999.</p><div class="actions"><input id="dniConsulta" placeholder="DNI del cliente"><button class="primary" onclick="consultaCliente()">Consultar</button></div></div>
+    <div id="clienteInfo"></div>
+  </section>
+  <section id="garantias" class="view hidden">
+    <div class="card legal"><h2>Garantías posibles en Argentina</h2><div class="notice"><strong>Importante:</strong> esta demo no reemplaza asesoramiento legal. Para prestar dinero de forma habitual conviene revisar encuadre contractual, tasas, protección del consumidor, AFIP/ARCA, UIF si correspondiera y documentación con abogado/contador.</div>
+      <h3>Opciones razonables</h3><p><strong>1. Contrato de mutuo:</strong> documento base con monto, tasa, cuotas, vencimientos, mora, jurisdicción y datos completos.</p><p><strong>2. Pagaré:</strong> útil como respaldo ejecutivo si está correctamente emitido. Conviene firmarlo junto con el mutuo.</p><p><strong>3. Codeudor solidario / fiador:</strong> muy usado en préstamos personales. Mejora la cobrabilidad si el deudor principal incumple.</p><p><strong>4. Prenda con registro:</strong> para automotor, maquinaria o bienes registrables. Es más formal y sirve para montos altos.</p><p><strong>5. Cheque de pago diferido:</strong> puede servir en clientes comerciales o monotributistas con cuenta corriente, pero tiene riesgo propio.</p><p><strong>6. Cesión de derechos de cobro:</strong> posible cuando el cliente tiene contratos, facturas o ingresos identificables.</p><h3>Lo que evitaría</h3><p><strong>Tarjeta de crédito como garantía:</strong> no es una garantía real sólida. Retener tarjeta, claves, CVV o datos sensibles puede ser riesgoso y generar problemas legales/comerciales. Mejor usar medios de pago autorizados y documentación formal.</p></div>
+  </section>
+</main>
+<script>
+const TNA=.46; const daily=TNA/365; const fmt=new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+const seed=[
+['María Fernández','30111222',500000,6,4,0],['Carlos Gutiérrez','28444555',780000,12,6,22],['Ana Ríos','32777888',950000,9,3,0],['Jorge Salinas','33888999',1200000,12,5,8],['Lucía Herrera','35444111',1500000,10,7,0],['Pablo Méndez','29666222',1800000,12,2,0],['Sofía Torres','31122333',2100000,8,4,0],['Diego Castro','30333444',2400000,12,8,0],['Valeria Molina','33444555',2700000,12,1,31],['Ramiro López','28777666',3000000,6,5,0],['Natalia Pereyra','34555777',3400000,12,9,0],['Federico Acosta','29999888',3800000,12,6,0],['Andrea Vega','32222999',4200000,9,2,0],['Martín Silva','30777111',4700000,12,10,0],['Carolina Núñez','31555222',5100000,12,4,13],['Gustavo Romero','28999333',5600000,10,3,0],['Paula Benítez','33666444',6200000,12,7,0],['Hernán Díaz','29888555',6900000,12,11,0],['Romina Chávez','34111666',7400000,12,5,0],['Esteban Morales','30555777',8000000,12,6,0]
+];
+function init(){if(!localStorage.mm3){localStorage.mm3=JSON.stringify(seed.map((s,i)=>({id:i+1,nombre:s[0],dni:s[1],monto:s[2],cuotas:s[3],pagas:s[4],atraso:s[5],fechaPago:new Date(Date.now()+((i%9)-4)*86400000).toISOString().slice(0,10)})));} renderAll();}
+function data(){return JSON.parse(localStorage.mm3)} function save(d){localStorage.mm3=JSON.stringify(d)}
+function calc(c){const total=c.monto*(1+TNA*(c.cuotas/12)); const cuota=total/c.cuotas; const pendiente=Math.max(0,total-cuota*c.pagas); const mora=c.atraso>0?pendiente*daily*c.atraso:0; return{total,cuota,pendiente,mora,saldo:pendiente+mora}}
+function renderAll(){renderKpis();renderResumen();renderTable()}
+function renderKpis(){const d=data();let cap=0,pend=0,mora=0,late=0;d.forEach(c=>{const x=calc(c);cap+=c.monto;pend+=x.pendiente;mora+=x.mora;if(c.atraso>0)late++});kCapital.textContent=fmt.format(cap);kPendiente.textContent=fmt.format(pend);kMora.textContent=fmt.format(mora);kAtraso.textContent=late;}
+function renderResumen(){const d=data().slice().sort((a,b)=>b.atraso-a.atraso).slice(0,6);resumenClientes.innerHTML=d.map(c=>{const x=calc(c),p=Math.round(c.pagas/c.cuotas*100);return `<div class="client-card"><div><h3>${c.nombre}</h3><div class="muted">DNI ${c.dni} · ${c.pagas}/${c.cuotas} cuotas pagas · saldo ${fmt.format(x.saldo)}</div><div class="progress" style="margin-top:8px"><div class="bar" style="width:${p}%"></div></div></div><span class="status ${c.atraso?'late':'ok'}">${c.atraso?c.atraso+' días':'al día'}</span></div>`}).join('')}
+function renderTable(){const query=(q?.value||'').toLowerCase();const f=filter?.value||'all';let rows=data().filter(c=>(c.nombre.toLowerCase().includes(query)||c.dni.includes(query))&&(f==='all'||(f==='late'?c.atraso>0:c.atraso===0)));tbody.innerHTML=rows.map(c=>{const x=calc(c);return `<tr><td><b>${c.nombre}</b></td><td>${c.dni}</td><td>${fmt.format(c.monto)}</td><td>${c.cuotas}</td><td>${c.pagas}</td><td>${c.fechaPago}</td><td>${c.atraso?c.atraso+' días':'-'}</td><td>${fmt.format(x.mora)}</td><td class="money">${fmt.format(x.saldo)}</td><td><span class="status ${c.atraso>20?'danger':c.atraso>0?'late':'ok'}">${c.atraso?'En mora':'Al día'}</span></td></tr>`}).join('')}
+function addClient(){const d=data();const cuotas=Math.min(12,Number(newCuotas.value));d.push({id:Date.now(),nombre:newNombre.value||'Nuevo cliente',dni:newDni.value||String(35000000+d.length),monto:Number(newMonto.value),cuotas,pagas:Math.min(Number(newPagas.value),cuotas),atraso:0,fechaPago:new Date().toISOString().slice(0,10)});save(d);renderAll();}
+function resetDemo(){delete localStorage.mm3;init()}
+function consultaCliente(){const dni=dniConsulta.value.trim();const c=data().find(x=>x.dni===dni);if(!c){clienteInfo.innerHTML='<div class="card loginbox"><h3>No encontrado</h3><p class="muted">Probá con un DNI de la demo.</p></div>';return}const x=calc(c);const p=Math.round(c.pagas/c.cuotas*100);clienteInfo.innerHTML=`<div class="card loginbox"><h2>${c.nombre}</h2><p class="muted">DNI ${c.dni}</p><div class="grid kpis" style="grid-template-columns:repeat(2,1fr)"><div><div class="muted">Monto original</div><div class="value">${fmt.format(c.monto)}</div></div><div><div class="muted">Saldo actual</div><div class="value">${fmt.format(x.saldo)}</div></div><div><div class="muted">Cuota estimada</div><div class="value">${fmt.format(x.cuota)}</div></div><div><div class="muted">Mora</div><div class="value">${fmt.format(x.mora)}</div></div></div><p><span class="status ${c.atraso?'late':'ok'}">${c.atraso?c.atraso+' días de atraso':'Al día'}</span></p><div class="progress"><div class="bar" style="width:${p}%"></div></div><p class="muted">Pagaste ${c.pagas} de ${c.cuotas} cuotas. Próximo vencimiento: ${c.fechaPago}.</p><button class="primary" onclick="alert('Demo: aquí se integraría Mercado Pago, transferencia o comprobante.')">Informar / realizar pago</button></div>`}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));document.getElementById(b.dataset.view).classList.remove('hidden')});init();
+</script>
+</body>
+</html>
